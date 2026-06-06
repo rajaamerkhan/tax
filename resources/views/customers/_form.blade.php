@@ -1,0 +1,9 @@
+<div class="row g-3">
+    <div class="col-md-6"><label class="form-label">Name</label><input class="form-control" name="name" value="{{ old('name', $customer->name) }}"></div>
+    <div class="col-md-3"><label class="form-label">CNIC / NTN</label><input class="form-control" name="ntn_cnic" value="{{ old('ntn_cnic', $customer->ntn_cnic) }}"></div>
+    <div class="col-md-3"><label class="form-label">STRN</label><input class="form-control" name="strn" value="{{ old('strn', $customer->strn) }}"></div>
+    <div class="col-md-4"><label class="form-label">Buyer Type</label><select class="form-select" name="buyer_type"><option value="registered" @selected(old('buyer_type', optional($customer->buyer_type)->value ?? $customer->buyer_type) === 'registered')>Registered</option><option value="unregistered" @selected(old('buyer_type', optional($customer->buyer_type)->value ?? $customer->buyer_type) === 'unregistered')>Unregistered</option></select></div>
+    <div class="col-md-4"><label class="form-label">Province</label><select class="form-select select2-basic" name="province_id" data-placeholder="Select province"><option value="">-- Select Province --</option>@foreach($provinces as $province)<option value="{{ $province->id }}" @selected(old('province_id', $customer->province_id) == $province->id)>{{ $province->display_name ?? $province->name }}</option>@endforeach</select></div>
+    <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status"><option value="active" @selected(old('status', optional($customer->status)->value ?? $customer->status) === 'active')>Active</option><option value="inactive" @selected(old('status', optional($customer->status)->value ?? $customer->status) === 'inactive')>Inactive</option></select></div>
+    <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="3">{{ old('address', $customer->address) }}</textarea></div>
+</div>
