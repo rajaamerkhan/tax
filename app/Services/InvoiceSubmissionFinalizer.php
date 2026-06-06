@@ -7,7 +7,6 @@ use App\Support\AuditLogger;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class InvoiceSubmissionFinalizer
 {
@@ -16,20 +15,21 @@ class InvoiceSubmissionFinalizer
         $invoice->refresh();
 
         $fbrInvoiceId = (string) Arr::get($response, 'invoiceNumber', Arr::get($response, 'invoiceId', ''));
-        $verifyUrl = rtrim((string) config('fbr.verify_url'), '/');
-        $qrPayload = $verifyUrl !== '' && $fbrInvoiceId !== ''
-            ? $verifyUrl.'/'.$fbrInvoiceId
-            : $invoice->invoice_number;
-
-        $qrSvg = QrCode::format('svg')->size(180)->generate($qrPayload);
-        $qrPath = 'qrcodes/invoice-'.$invoice->id.'.svg';
-        Storage::disk('public')->put($qrPath, $qrSvg);
 
         $invoice->markSubmitted($response, $fbrInvoiceId !== '' ? $fbrInvoiceId : null);
         $invoice->refresh()->loadMissing(['items', 'customer', 'saleOriginProvince', 'destinationProvince']);
 
+        $qrCodeService = app(InvoiceQrCodeService::class);
+        $qrPath = $qrCodeService->store($invoice);
+        $qrCodeDataUri = $qrCodeService->dataUri($invoice);
+        $verificationUrl = $qrCodeService->verificationUrl($invoice);
+
         $pdfPath = 'invoices/invoice-'.$invoice->invoice_number.'.pdf';
-        $pdfBinary = Pdf::loadView('pdf.invoice', ['invoice' => $invoice])
+        $pdfBinary = Pdf::loadView('pdf.invoice', [
+            'invoice' => $invoice,
+            'qrCodeDataUri' => $qrCodeDataUri,
+            'verificationUrl' => $verificationUrl,
+        ])
             ->setPaper('a4')
             ->output();
         Storage::disk('public')->put($pdfPath, $pdfBinary);

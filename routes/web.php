@@ -8,6 +8,7 @@ use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceVerificationController;
 use App\Http\Controllers\InvoiceAutocompleteController;
 use App\Http\Controllers\InvoiceImportController;
 use App\Http\Controllers\InvoiceReferenceController;
@@ -15,6 +16,9 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
+
+Route::get('/invoices/verify/{fbrInvoiceId}', InvoiceVerificationController::class)
+    ->name('invoices.verify');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');

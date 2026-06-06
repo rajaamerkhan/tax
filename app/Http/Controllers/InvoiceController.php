@@ -13,6 +13,7 @@ use App\Models\SaleType;
 use App\Models\Scenario;
 use App\Models\SroSchedule;
 use App\Models\TaxRate;
+use App\Services\InvoiceQrCodeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -124,20 +125,37 @@ class InvoiceController extends Controller
     {
         $invoice->load(['items', 'customer', 'saleOriginProvince', 'destinationProvince']);
 
-        return view('pdf.invoice', compact('invoice'));
+        $qrCodeService = app(InvoiceQrCodeService::class);
+
+        return view('pdf.invoice', [
+            'invoice' => $invoice,
+            'qrCodeDataUri' => $qrCodeService->dataUri($invoice),
+            'verificationUrl' => $qrCodeService->verificationUrl($invoice),
+        ]);
     }
 
     public function downloadPdf(Invoice $invoice)
     {
         $invoice->load(['items', 'customer', 'saleOriginProvince', 'destinationProvince']);
 
-        if ($invoice->pdf_path && Storage::disk('public')->exists($invoice->pdf_path)) {
-            return Storage::disk('public')->download($invoice->pdf_path, 'invoice-'.$invoice->invoice_number.'.pdf');
+        $qrCodeService = app(InvoiceQrCodeService::class);
+        $pdfBinary = Pdf::loadView('pdf.invoice', [
+            'invoice' => $invoice,
+            'qrCodeDataUri' => $qrCodeService->dataUri($invoice),
+            'verificationUrl' => $qrCodeService->verificationUrl($invoice),
+        ])
+            ->setPaper('a4')
+            ->output();
+
+        if ($invoice->pdf_path) {
+            Storage::disk('public')->put($invoice->pdf_path, $pdfBinary);
         }
 
-        return Pdf::loadView('pdf.invoice', compact('invoice'))
-            ->setPaper('a4')
-            ->download('invoice-'.$invoice->invoice_number.'.pdf');
+        return response()->streamDownload(function () use ($pdfBinary): void {
+            echo $pdfBinary;
+        }, 'invoice-'.$invoice->invoice_number.'.pdf', [
+            'Content-Type' => 'application/pdf',
+        ]);
     }
 
     private function syncItems(Invoice $invoice, array $items): void

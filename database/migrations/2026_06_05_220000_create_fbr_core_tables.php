@@ -98,7 +98,7 @@ return new class extends Migration
         Schema::create('hs_codes', function (Blueprint $table): void {
             $table->id();
             $table->string('code')->unique();
-            $table->string('description');
+            $table->text('description');
             $table->foreignId('uom_id')->nullable()->constrained()->nullOnDelete();
             $table->string('fbr_item_code')->nullable()->index();
             $table->string('custom_duty_code')->nullable();

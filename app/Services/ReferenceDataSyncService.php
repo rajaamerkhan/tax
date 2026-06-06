@@ -12,6 +12,19 @@ use Illuminate\Support\Arr;
 
 class ReferenceDataSyncService
 {
+    private const CANONICAL_PROVINCES = [
+        'PUNJAB' => ['code' => 'PB', 'name' => 'Punjab', 'fbr_code' => '01'],
+        'SINDH' => ['code' => 'SD', 'name' => 'Sindh', 'fbr_code' => '02'],
+        'KHYBER PAKHTUNKHWA' => ['code' => 'KP', 'name' => 'Khyber Pakhtunkhwa', 'fbr_code' => '03'],
+        'BALOCHISTAN' => ['code' => 'BL', 'name' => 'Balochistan', 'fbr_code' => '04'],
+        'ISLAMABAD CAPITAL TERRITORY' => ['code' => 'ICT', 'name' => 'Islamabad Capital Territory', 'fbr_code' => '05'],
+        'ISLAMABAD' => ['code' => 'ICT', 'name' => 'Islamabad Capital Territory', 'fbr_code' => '05'],
+        'AZAD JAMMU AND KASHMIR' => ['code' => 'AJK', 'name' => 'Azad Jammu and Kashmir', 'fbr_code' => '06'],
+        'AZAD JAMMU & KASHMIR' => ['code' => 'AJK', 'name' => 'Azad Jammu and Kashmir', 'fbr_code' => '06'],
+        'GILGIT-BALTISTAN' => ['code' => 'GB', 'name' => 'Gilgit-Baltistan', 'fbr_code' => '07'],
+        'EXPORT (OUTSIDE PAKISTAN)' => ['code' => 'EXP', 'name' => 'Export (Outside Pakistan)', 'fbr_code' => '08'],
+    ];
+
     public function __construct(private readonly FbrDigitalInvoiceService $fbrService)
     {
     }
@@ -31,14 +44,36 @@ class ReferenceDataSyncService
         $rows = Arr::wrap($this->fbrService->fetchReferenceData('province_codes'));
 
         foreach ($rows as $row) {
+            $rawName = (string) Arr::get($row, 'stateProvinceDesc', Arr::get($row, 'provinceName', Arr::get($row, 'name', 'Unknown Province')));
+            $canonical = $this->normalizeProvince($rawName);
+
+            if ($canonical) {
+                Province::updateOrCreate(
+                    ['code' => $canonical['code']],
+                    [
+                        'name' => $canonical['name'],
+                        'fbr_code' => $canonical['fbr_code'],
+                    ],
+                );
+
+                continue;
+            }
+
             Province::updateOrCreate(
                 ['fbr_code' => (string) Arr::get($row, 'stateProvinceCode', Arr::get($row, 'provinceId', Arr::get($row, 'id')))],
                 [
-                    'code' => (string) Arr::get($row, 'stateProvinceDesc', Arr::get($row, 'provinceCode', Arr::get($row, 'code', uniqid('PR-')))),
-                    'name' => (string) Arr::get($row, 'stateProvinceDesc', Arr::get($row, 'provinceName', Arr::get($row, 'name', 'Unknown Province'))),
+                    'code' => (string) Arr::get($row, 'provinceCode', Arr::get($row, 'code', uniqid('PR-'))),
+                    'name' => $rawName,
                 ],
             );
         }
+    }
+
+    private function normalizeProvince(string $name): ?array
+    {
+        $normalized = strtoupper(trim(preg_replace('/\s+/', ' ', $name)));
+
+        return self::CANONICAL_PROVINCES[$normalized] ?? null;
     }
 
     public function syncUoms(): void
