@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PakistanTaxHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Validation\Validator;
@@ -24,7 +25,7 @@ class InvoiceRequest extends FormRequest
             'destination_province_id' => ['nullable', 'exists:provinces,id'],
             'customer_id' => ['nullable', 'exists:customers,id'],
             'buyer_name' => ['nullable', 'string', 'max:255'],
-            'buyer_ntn_cnic' => ['nullable', 'string', 'max:100'],
+            'buyer_ntn_cnic' => ['nullable', 'ntn'],
             'buyer_strn' => ['nullable', 'string', 'max:100'],
             'buyer_address' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
@@ -46,6 +47,15 @@ class InvoiceRequest extends FormRequest
             'items.*.sro_schedule_number' => ['nullable', 'string', 'max:100'],
             'items.*.item_serial_number' => ['nullable', 'string', 'max:100'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'buyer_ntn_cnic' => $this->filled('buyer_ntn_cnic')
+                ? PakistanTaxHelper::normalizeNtn((string) $this->input('buyer_ntn_cnic'))
+                : $this->input('buyer_ntn_cnic'),
+        ]);
     }
 
     public function withValidator(Validator $validator): void

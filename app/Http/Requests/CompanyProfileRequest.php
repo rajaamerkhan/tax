@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PakistanTaxHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CompanyProfileRequest extends FormRequest
@@ -15,7 +16,7 @@ class CompanyProfileRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'ntn_cnic' => ['required', 'string', 'max:100'],
+            'ntn_cnic' => ['required', 'ntn'],
             'strn' => ['nullable', 'string', 'max:100'],
             'province_id' => ['nullable', 'exists:provinces,id'],
             'address' => ['nullable', 'string'],
@@ -24,5 +25,14 @@ class CompanyProfileRequest extends FormRequest
             'fbr_token' => ['nullable', 'string'],
             'fbr_environment' => ['required', 'in:sandbox,production'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'ntn_cnic' => $this->filled('ntn_cnic')
+                ? PakistanTaxHelper::normalizeNtn((string) $this->input('ntn_cnic'))
+                : $this->input('ntn_cnic'),
+        ]);
     }
 }
