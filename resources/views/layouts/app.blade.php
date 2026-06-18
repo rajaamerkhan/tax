@@ -17,7 +17,7 @@
 <div class="app-shell">
     <aside class="sidebar">
         <div>
-            <div class="brand">FBR Digital Invoice System</div>
+            <div class="brand">{{ config('app.name') }}</div>
             <div class="env-badge env-{{ config('fbr.env') }}">{{ strtoupper(config('fbr.env')) }}</div>
             <nav class="nav flex-column menu mt-4">
                 <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
@@ -35,6 +35,7 @@
         <div class="small text-secondary">
             <div>{{ auth()->user()->name }}</div>
             <div>{{ auth()->user()->role->label() }}</div>
+            <div class="sidebar-version">{{ config('app.name') }} v{{ config('app.version') }}</div>
         </div>
     </aside>
 

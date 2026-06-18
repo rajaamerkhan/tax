@@ -1,7 +1,7 @@
 # Project Memory
 
 ## Product
-- App name: `FBR Digital Invoice System`
+- App name: `Safentra Tax`
 - Stack: Laravel 13, MySQL/PostgreSQL support, Redis, Bootstrap/AdminLTE-style UI
 - Primary domain: Pakistan FBR digital invoicing workflow
 

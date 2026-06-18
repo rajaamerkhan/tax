@@ -70,6 +70,7 @@ body {
     box-shadow: 0 8px 22px rgba(47, 43, 61, .06);
 }
 .page-title { margin: 0; font-size: 1.85rem; font-weight: 700; color: #4b465c; letter-spacing: -.03em; }
+.sidebar-version { margin-top: 10px; font-size: .78rem; font-weight: 600; }
 .panel, .stat-card, .auth-card {
     background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(252,252,255,.98));
     border: 1px solid rgba(231, 232, 242, .95);

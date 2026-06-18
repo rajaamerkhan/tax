@@ -11,7 +11,7 @@
 <div class="auth-card">
     <div class="mb-4">
         <div class="eyebrow">Pakistan FBR / PRAL</div>
-        <h1 class="h3 mb-2">FBR Digital Invoice System</h1>
+        <h1 class="h3 mb-2">{{ config('app.name') }}</h1>
         <p class="text-secondary mb-0">Login to manage draft, submitted, editable, and locked invoices.</p>
     </div>
     <form method="POST" action="{{ route('login.store') }}" class="row g-3">

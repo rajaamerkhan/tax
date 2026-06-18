@@ -6,7 +6,7 @@
 <div class="invoice-detail-page">
     <section class="invoice-detail-hero">
         <div class="invoice-detail-hero-main">
-            <div class="invoice-detail-kicker">FBR Digital Invoice System</div>
+            <div class="invoice-detail-kicker">{{ config('app.name') }}</div>
             <h1>{{ $invoice->invoice_number }}</h1>
             <div class="invoice-detail-subtitle">
                 <span>{{ $invoice->buyer_name ?: 'Buyer not set' }}</span>
