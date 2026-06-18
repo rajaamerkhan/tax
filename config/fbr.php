@@ -9,6 +9,8 @@ return [
     'endpoints' => [
         'validate_invoice' => env('FBR_VALIDATE_ENDPOINT', '/di_data/v1/di/validateinvoicedata_sb'),
         'submit_invoice' => env('FBR_SUBMIT_ENDPOINT', '/di_data/v1/di/postinvoicedata_sb'),
+        'validate_invoice_production' => env('FBR_PRODUCTION_VALIDATE_ENDPOINT', '/di_data/v1/di/validateinvoicedata'),
+        'submit_invoice_production' => env('FBR_PRODUCTION_SUBMIT_ENDPOINT', '/di_data/v1/di/postinvoicedata'),
         'province_codes' => env('FBR_ENDPOINT_PROVINCES', '/pdi/v1/provinces'),
         'document_types' => env('FBR_ENDPOINT_DOCUMENT_TYPES', '/pdi/v1/doctypecode'),
         'item_codes' => env('FBR_ENDPOINT_ITEM_CODES', '/pdi/v1/itemdesccode'),

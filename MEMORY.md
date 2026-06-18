@@ -7,6 +7,18 @@
 
 ## Current FBR Status
 - The app currently supports a local mock FBR API for development.
+- Sandbox invoice validation/submission is configured to use:
+  - Base URL: `https://gw.fbr.gov.pk`
+  - Submit endpoint: `/di_data/v1/di/postinvoicedata_sb`
+  - Validate endpoint: `/di_data/v1/di/validateinvoicedata_sb`
+  - Sandbox token: `N/A` / blank
+- Production invoice endpoints use the same gateway host with non-sandbox paths:
+  - Submit endpoint: `/di_data/v1/di/postinvoicedata`
+  - Validate endpoint: `/di_data/v1/di/validateinvoicedata`
+- Placeholder token values `N/A`, `NA`, `null`, and blank are treated as no bearer token.
+- FBR API bearer token is read from `.env` via `FBR_SECURITY_TOKEN`; company profile token data should not override outbound API authentication.
+- FBR invoice request payload should follow the official JSON shape with top-level seller/buyer fields and `items`; absent string fields should be sent as empty strings rather than `null`, while documented decimal fields such as `extraTax` stay numeric.
+- STATL uses `GET /dist/v1/statl` with `regno` and `date`; registration type uses `GET /dist/v1/Get_Reg_Type` with `Registration_No`.
 - Production rollout must **not** use the mock defaults from `.env.example`.
 - `Validate with FBR` and `Submit to FBR` architecture is in place, but payload compliance against the official FBR PDF is **not yet signed off as complete**.
 - `FBR_VERIFY_URL` currently points to the app’s local/public verification page pattern:

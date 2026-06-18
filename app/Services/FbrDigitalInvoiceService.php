@@ -18,12 +18,12 @@ class FbrDigitalInvoiceService
 
     public function validateInvoice(Invoice $invoice): array
     {
-        return $this->sendInvoiceRequest($invoice, config('fbr.endpoints.validate_invoice'));
+        return $this->sendInvoiceRequest($invoice, $this->invoiceEndpoint('validate_invoice'));
     }
 
     public function submitInvoice(Invoice $invoice): array
     {
-        return $this->sendInvoiceRequest($invoice, config('fbr.endpoints.submit_invoice'));
+        return $this->sendInvoiceRequest($invoice, $this->invoiceEndpoint('submit_invoice'));
     }
 
     public function fetchReferenceData(string $endpointKey, array $query = []): array
@@ -31,26 +31,56 @@ class FbrDigitalInvoiceService
         return $this->request()->get(config("fbr.endpoints.{$endpointKey}"), $query)->throw()->json();
     }
 
-    public function verifyStAtl(string $registrationNumber): array
+    public function verifyStAtl(string $registrationNumber, ?string $date = null): array
     {
         return $this->request()->get(config('fbr.endpoints.st_atl'), [
-            'registration_no' => $registrationNumber,
+            'regno' => $registrationNumber,
+            'date' => $date ?? now()->toDateString(),
+        ])->throw()->json();
+    }
+
+    public function registrationType(string $registrationNumber): array
+    {
+        return $this->request()->get(config('fbr.endpoints.registration_type'), [
+            'Registration_No' => $registrationNumber,
         ])->throw()->json();
     }
 
     private function request(): PendingRequest
     {
-        $companyProfile = CompanyProfile::query()->first();
-        $environment = $companyProfile?->fbr_environment?->value ?? config('fbr.env');
-        $baseUrl = $environment === 'production' ? config('fbr.production_base_url') : config('fbr.sandbox_base_url');
-        $token = $companyProfile?->fbr_token ?: config('fbr.security_token');
+        $baseUrl = $this->currentEnvironment() === 'production' ? config('fbr.production_base_url') : config('fbr.sandbox_base_url');
+        $token = $this->securityToken();
 
-        return Http::acceptJson()
+        $request = Http::acceptJson()
             ->asJson()
-            ->withToken($token)
             ->baseUrl(rtrim((string) $baseUrl, '/'))
             ->timeout(30)
             ->retry(2, 1000);
+
+        return filled($token) ? $request->withToken($token) : $request;
+    }
+
+    private function currentEnvironment(): string
+    {
+        $companyProfile = CompanyProfile::query()->first();
+
+        return $companyProfile?->fbr_environment?->value ?? config('fbr.env');
+    }
+
+    private function invoiceEndpoint(string $key): string
+    {
+        if ($this->currentEnvironment() === 'production') {
+            return (string) config("fbr.endpoints.{$key}_production", config("fbr.endpoints.{$key}"));
+        }
+
+        return (string) config("fbr.endpoints.{$key}");
+    }
+
+    private function securityToken(): ?string
+    {
+        $token = trim((string) config('fbr.security_token', ''));
+
+        return in_array(strtolower($token), ['', 'n/a', 'na', 'null'], true) ? null : $token;
     }
 
     private function sendInvoiceRequest(Invoice $invoice, string $endpoint): array
