@@ -16,13 +16,25 @@
   - Submit endpoint: `/di_data/v1/di/postinvoicedata`
   - Validate endpoint: `/di_data/v1/di/validateinvoicedata`
 - Placeholder token values `N/A`, `NA`, `null`, and blank are treated as no bearer token.
-- FBR API bearer token is read from `.env` via `FBR_SECURITY_TOKEN`; company profile token data should not override outbound API authentication.
+- FBR API bearer token is read from the company profile `fbr_token` saved in the portal; `.env` `FBR_SECURITY_TOKEN` is only a fallback when the portal token is blank or placeholder.
+- Company profile includes sandbox `Business Nature`; for `Distributor`, mock FBR validation should assume all distributor sectors and allow the union of their sandbox scenarios/sale types, with `.env` mock allowlists only as fallback when no profile rule applies.
 - FBR invoice request payload should follow the official JSON shape with top-level seller/buyer fields and `items`; absent string fields should be sent as empty strings rather than `null`, while documented decimal fields such as `extraTax` stay numeric.
 - STATL uses `GET /dist/v1/statl` with `regno` and `date`; registration type uses `GET /dist/v1/Get_Reg_Type` with `Registration_No`.
 - Production rollout must **not** use the mock defaults from `.env.example`.
 - `Validate with FBR` and `Submit to FBR` architecture is in place, but payload compliance against the official FBR PDF is **not yet signed off as complete**.
 - `FBR_VERIFY_URL` currently points to the app’s local/public verification page pattern:
   - `/invoices/verify/{fbr_invoice_id}`
+
+## Official FBR References
+- Use this customs tariff PDF as the HS-code reference source:
+  - `https://download1.fbr.gov.pk/Docs/2017112112112348253CustomsTariff2017-18Ch1-99.pdf`
+- Use this DI API technical documentation for endpoint, payload, reference API, scenario, error-code, auth, and QR/logo rules:
+  - `https://download1.fbr.gov.pk/Docs/20257301172130815TechnicalDocumentationforDIAPIV1.12.pdf`
+- Use this DI user manual for portal/user workflow behavior:
+  - `https://download1.fbr.gov.pk/Docs/20257301171649798DIUserManualV1.5.pdf`
+- Use this FBR FAQ page for operational FAQ guidance:
+  - `https://fbr.gov.pk/faqs/173967/173969`
+- When changing payload mapping, mock validation, scenarios, HS/UOM behavior, or production-readiness checks, verify against these references first.
 
 ## Invoice Workflow
 - Invoice statuses used:

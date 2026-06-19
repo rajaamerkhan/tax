@@ -48,8 +48,9 @@ class FbrDigitalInvoiceService
 
     private function request(): PendingRequest
     {
-        $baseUrl = $this->currentEnvironment() === 'production' ? config('fbr.production_base_url') : config('fbr.sandbox_base_url');
-        $token = $this->securityToken();
+        $companyProfile = $this->companyProfile();
+        $baseUrl = $this->currentEnvironment($companyProfile) === 'production' ? config('fbr.production_base_url') : config('fbr.sandbox_base_url');
+        $token = $this->securityToken($companyProfile);
 
         $request = Http::acceptJson()
             ->asJson()
@@ -60,25 +61,39 @@ class FbrDigitalInvoiceService
         return filled($token) ? $request->withToken($token) : $request;
     }
 
-    private function currentEnvironment(): string
+    private function companyProfile(): ?CompanyProfile
     {
-        $companyProfile = CompanyProfile::query()->first();
+        return CompanyProfile::query()->first();
+    }
 
+    private function currentEnvironment(?CompanyProfile $companyProfile = null): string
+    {
         return $companyProfile?->fbr_environment?->value ?? config('fbr.env');
     }
 
     private function invoiceEndpoint(string $key): string
     {
-        if ($this->currentEnvironment() === 'production') {
+        if ($this->currentEnvironment($this->companyProfile()) === 'production') {
             return (string) config("fbr.endpoints.{$key}_production", config("fbr.endpoints.{$key}"));
         }
 
         return (string) config("fbr.endpoints.{$key}");
     }
 
-    private function securityToken(): ?string
+    private function securityToken(?CompanyProfile $companyProfile): ?string
     {
-        $token = trim((string) config('fbr.security_token', ''));
+        $token = $this->usableToken($companyProfile?->fbr_token);
+
+        if ($token !== null) {
+            return $token;
+        }
+
+        return $this->usableToken(config('fbr.security_token', ''));
+    }
+
+    private function usableToken(mixed $token): ?string
+    {
+        $token = trim((string) $token);
 
         return in_array(strtolower($token), ['', 'n/a', 'na', 'null'], true) ? null : $token;
     }
@@ -91,7 +106,7 @@ class FbrDigitalInvoiceService
             'user_id' => auth()->id(),
             'endpoint' => $endpoint,
             'method' => 'POST',
-            'environment' => config('fbr.env'),
+            'environment' => $this->currentEnvironment($this->companyProfile()),
             'status' => 'pending',
             'request_payload' => $payload,
         ]);

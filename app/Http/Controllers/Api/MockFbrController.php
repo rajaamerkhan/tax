@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CompanyProfile;
+use App\Support\FbrSandboxProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -208,6 +210,7 @@ class MockFbrController extends Controller
 
         if ($errors !== []) {
             $first = $errors[0];
+
             return response()->json([
                 'dated' => now()->format('Y-m-d H:i:s'),
                 'validationResponse' => [
@@ -269,6 +272,17 @@ class MockFbrController extends Controller
             }
         }
 
+        $allowedScenarios = $this->mockAllowlist('allowed_scenarios');
+        $scenarioId = (string) Arr::get($payload, 'scenarioId', '');
+
+        if ($sandbox && $allowedScenarios !== [] && ! in_array($scenarioId, $allowedScenarios, true)) {
+            return [[
+                'errorCode' => 'MOCK_SCENARIO_NOT_ALLOWED',
+                'error' => "Scenario {$scenarioId} is not enabled for this sandbox mock profile.",
+                'topLevel' => true,
+            ]];
+        }
+
         $items = Arr::wrap($payload['items'] ?? []);
         if ($items === []) {
             return [[
@@ -277,6 +291,8 @@ class MockFbrController extends Controller
                 'topLevel' => true,
             ]];
         }
+
+        $allowedSaleTypes = $this->mockAllowlist('allowed_sale_types');
 
         $itemRequired = ['hsCode', 'productDescription', 'rate', 'uoM', 'quantity', 'totalValues', 'valueSalesExcludingST', 'fixedNotifiedValueOrRetailPrice', 'salesTaxApplicable', 'salesTaxWithheldAtSource', 'saleType'];
 
@@ -291,6 +307,16 @@ class MockFbrController extends Controller
                 }
             }
 
+            $saleType = (string) $item['saleType'];
+
+            if ($sandbox && $allowedSaleTypes !== [] && ! in_array($saleType, $allowedSaleTypes, true)) {
+                return [[
+                    'errorCode' => 'MOCK_SALE_TYPE_NOT_ALLOWED',
+                    'error' => "Sale type {$saleType} is not enabled for this sandbox mock profile.",
+                    'topLevel' => false,
+                ]];
+            }
+
             if (! preg_match('/^\d{4}\.\d{4}$/', (string) $item['hsCode'])) {
                 return [[
                     'errorCode' => '0052',
@@ -303,6 +329,25 @@ class MockFbrController extends Controller
         return [];
     }
 
+    private function mockAllowlist(string $key): array
+    {
+        $businessNature = CompanyProfile::query()->value('fbr_business_nature');
+        $profileValues = match ($key) {
+            'allowed_scenarios' => FbrSandboxProfile::allowedScenariosForBusinessNature($businessNature),
+            'allowed_sale_types' => FbrSandboxProfile::allowedSaleTypesForBusinessNature($businessNature),
+            default => [],
+        };
+
+        if ($profileValues !== []) {
+            return $profileValues;
+        }
+
+        return array_values(array_filter(array_map(
+            fn (mixed $value): string => trim((string) $value),
+            Arr::wrap(config("fbr.mock.{$key}", [])),
+        )));
+    }
+
     private function authorizeToken(Request $request): void
     {
         $configured = config('fbr.security_token');
@@ -313,6 +358,6 @@ class MockFbrController extends Controller
 
     private function issueInvoiceNumber(string $sellerNtnCnic): string
     {
-        return preg_replace('/\D+/', '', $sellerNtnCnic). 'DI' . now()->format('YmdHisv');
+        return preg_replace('/\D+/', '', $sellerNtnCnic).'DI'.now()->format('YmdHisv');
     }
 }

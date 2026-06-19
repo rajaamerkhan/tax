@@ -6,8 +6,9 @@ use App\Http\Requests\CompanyProfileRequest;
 use App\Jobs\SyncFbrReferenceDataJob;
 use App\Models\CompanyProfile;
 use App\Models\Province;
-use Illuminate\Support\Collection;
+use App\Support\FbrSandboxProfile;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class CompanyProfileController extends Controller
@@ -17,12 +18,19 @@ class CompanyProfileController extends Controller
         return view('company.edit', [
             'company' => CompanyProfile::firstOrNew(),
             'provinces' => $this->provinceOptions(),
+            'businessNatures' => FbrSandboxProfile::businessNatures(),
         ]);
     }
 
     public function update(CompanyProfileRequest $request): RedirectResponse
     {
-        CompanyProfile::query()->updateOrCreate(['id' => CompanyProfile::query()->value('id')], $request->validated());
+        $data = $request->validated();
+
+        if (! $request->filled('fbr_token')) {
+            unset($data['fbr_token']);
+        }
+
+        CompanyProfile::query()->updateOrCreate(['id' => CompanyProfile::query()->value('id')], $data);
 
         return back()->with('status', 'Company profile updated successfully.');
     }

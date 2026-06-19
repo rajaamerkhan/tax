@@ -24,4 +24,8 @@ return [
         'st_atl' => env('FBR_ENDPOINT_ST_ATL', '/dist/v1/statl'),
         'registration_type' => env('FBR_ENDPOINT_REGISTRATION_TYPE', '/dist/v1/Get_Reg_Type'),
     ],
+    'mock' => [
+        'allowed_scenarios' => array_filter(array_map('trim', explode(',', env('FBR_MOCK_ALLOWED_SCENARIOS', '')))),
+        'allowed_sale_types' => array_filter(array_map('trim', explode(',', env('FBR_MOCK_ALLOWED_SALE_TYPES', '')))),
+    ],
 ];

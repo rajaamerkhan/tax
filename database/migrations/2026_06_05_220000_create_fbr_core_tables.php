@@ -36,8 +36,10 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
-            $table->string('fbr_token')->nullable();
+            $table->text('fbr_token')->nullable();
             $table->string('fbr_environment')->default(FbrEnvironment::Sandbox->value);
+            $table->string('fbr_business_nature')->nullable();
+            $table->string('fbr_sector')->nullable();
             $table->timestamps();
         });
 

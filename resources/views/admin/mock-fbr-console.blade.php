@@ -4,11 +4,19 @@
 <div class="panel">
     <div class="panel-header d-flex justify-content-between align-items-center">
         <h2>Mock FBR Request / Response Console</h2>
-        <form method="POST" action="{{ route('admin.mock-fbr-console.demo-invoice') }}">
+        <form method="POST" action="{{ route('admin.mock-fbr-console.demo-invoice') }}" class="d-flex gap-2 align-items-center">
             @csrf
+            <select class="form-select" name="scenario_code" style="min-width: 360px">
+                @foreach($demoScenarioOptions as $scenarioOption)
+                    <option value="{{ $scenarioOption['code'] }}">{{ $scenarioOption['label'] }}</option>
+                @endforeach
+            </select>
             <button class="btn btn-primary">Submit Demo Invoice</button>
         </form>
     </div>
+    @if(optional($company?->fbr_environment)->value !== 'sandbox')
+        <div class="alert alert-warning mt-3 mb-0">Demo invoice submission is available only when Company Profile is set to Sandbox.</div>
+    @endif
     <form class="row g-3 mb-3">
         <div class="col-md-4"><input class="form-control" name="endpoint" value="{{ request('endpoint') }}" placeholder="Filter by endpoint"></div>
         <div class="col-md-3"><select class="form-select" name="status"><option value="">All statuses</option><option value="Valid" @selected(request('status')==='Valid')>Valid</option><option value="Invalid" @selected(request('status')==='Invalid')>Invalid</option><option value="failed" @selected(request('status')==='failed')>failed</option></select></div>

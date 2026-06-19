@@ -14,6 +14,7 @@
         <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="3">{{ old('address', $company->address) }}</textarea></div>
         <div class="col-md-4"><label class="form-label">FBR Environment</label><select class="form-select" name="fbr_environment"><option value="sandbox" @selected(old('fbr_environment', optional($company->fbr_environment)->value) === 'sandbox')>Sandbox</option><option value="production" @selected(old('fbr_environment', optional($company->fbr_environment)->value) === 'production')>Production</option></select></div>
         <div class="col-md-8"><label class="form-label">FBR Security Token</label><input class="form-control" name="fbr_token" value="{{ old('fbr_token') }}" placeholder="Leave blank to keep current token"></div>
+        <div class="col-md-4"><label class="form-label">Business Nature</label><select class="form-select" name="fbr_business_nature"><option value="">Select</option>@foreach($businessNatures as $value => $label)<option value="{{ $value }}" @selected(old('fbr_business_nature', $company->fbr_business_nature) === $value)>{{ $label }}</option>@endforeach</select></div>
         <div class="col-12"><button class="btn btn-primary">Save Company Profile</button></div>
     </form>
 </div>

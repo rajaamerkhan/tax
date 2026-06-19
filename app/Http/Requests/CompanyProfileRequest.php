@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Support\FbrSandboxProfile;
 use App\Support\PakistanTaxHelper;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CompanyProfileRequest extends FormRequest
 {
@@ -24,6 +26,7 @@ class CompanyProfileRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'fbr_token' => ['nullable', 'string'],
             'fbr_environment' => ['required', 'in:sandbox,production'],
+            'fbr_business_nature' => ['nullable', Rule::in(array_keys(FbrSandboxProfile::businessNatures()))],
         ];
     }
 

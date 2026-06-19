@@ -21,6 +21,7 @@ class CompanyProfile extends Model
         'email',
         'fbr_token',
         'fbr_environment',
+        'fbr_business_nature',
     ];
 
     protected function casts(): array
