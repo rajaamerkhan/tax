@@ -16,12 +16,15 @@ use App\Models\Uom;
 use App\Services\FbrDigitalInvoiceService;
 use App\Services\InvoiceSubmissionFinalizer;
 use App\Support\FbrDemoScenarioFixtures;
+use App\Support\FbrEnvironmentContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class DemoInvoiceController extends Controller
 {
+    public function __construct(private readonly FbrEnvironmentContext $environmentContext) {}
+
     public function __invoke(Request $request, FbrDigitalInvoiceService $service, InvoiceSubmissionFinalizer $finalizer): RedirectResponse
     {
         $company = CompanyProfile::query()->firstOrFail();
@@ -85,6 +88,7 @@ class DemoInvoiceController extends Controller
             'invoice_number' => 'MOCK-'.Str::upper(Str::random(8)),
             'invoice_date' => now()->toDateString(),
             'invoice_type' => 'Sale Invoice',
+            'environment' => $this->environmentContext->current(),
             'scenario_id' => $scenario?->id,
             'sale_origin_province_id' => $originProvince?->id,
             'destination_province_id' => $destinationProvince?->id,

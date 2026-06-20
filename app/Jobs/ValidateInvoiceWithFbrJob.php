@@ -6,6 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Services\FbrDigitalInvoiceService;
 use App\Support\AuditLogger;
+use App\Support\FbrEnvironmentContext;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -16,13 +17,15 @@ class ValidateInvoiceWithFbrJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public readonly int $invoiceId)
-    {
-    }
+    public function __construct(public readonly int $invoiceId) {}
 
-    public function handle(FbrDigitalInvoiceService $service): void
+    public function handle(FbrDigitalInvoiceService $service, FbrEnvironmentContext $environmentContext): void
     {
         $invoice = Invoice::query()->findOrFail($this->invoiceId);
+        if (! $environmentContext->isCurrent($invoice->environment)) {
+            return;
+        }
+
         $response = $service->validateInvoice($invoice);
         $invoice->update([
             'status' => InvoiceStatus::Validated,

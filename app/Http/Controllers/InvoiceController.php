@@ -14,19 +14,23 @@ use App\Models\Scenario;
 use App\Models\SroSchedule;
 use App\Models\TaxRate;
 use App\Services\InvoiceQrCodeService;
+use App\Support\FbrEnvironmentContext;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class InvoiceController extends Controller
 {
+    public function __construct(private readonly FbrEnvironmentContext $environmentContext) {}
+
     public function index(Request $request): View
     {
         $invoices = Invoice::query()
+            ->where('environment', $this->environmentContext->current())
             ->with('customer')
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $query->where(function ($inner) use ($request): void {
@@ -61,6 +65,7 @@ class InvoiceController extends Controller
         return view('invoices.create', $this->formData(new Invoice([
             'invoice_date' => $invoiceDate,
             'invoice_type' => 'Sale Invoice',
+            'environment' => $this->environmentContext->current(),
             'invoice_number' => $this->generateInvoiceNumber($invoiceDate),
         ])));
     }
@@ -68,6 +73,7 @@ class InvoiceController extends Controller
     public function store(InvoiceRequest $request): RedirectResponse
     {
         $invoice = Invoice::create(array_merge($request->safe()->except('items'), [
+            'environment' => $this->environmentContext->current(),
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
         ]));
@@ -79,6 +85,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice): View
     {
+        $this->authorizeCurrentEnvironment($invoice);
         $invoice->load(['items', 'customer', 'saleOriginProvince', 'destinationProvince', 'scenario']);
 
         return view('invoices.show', compact('invoice'));
@@ -86,6 +93,7 @@ class InvoiceController extends Controller
 
     public function edit(Invoice $invoice): View
     {
+        $this->authorizeCurrentEnvironment($invoice);
         abort_if($invoice->isLocked(), 422, 'Locked invoices cannot be edited.');
 
         $invoice->load('items');
@@ -95,6 +103,7 @@ class InvoiceController extends Controller
 
     public function update(InvoiceRequest $request, Invoice $invoice): RedirectResponse
     {
+        $this->authorizeCurrentEnvironment($invoice);
         abort_if($invoice->isLocked(), 422, 'Locked invoices cannot be edited.');
 
         $invoice->update(array_merge($request->safe()->except('items'), [
@@ -109,6 +118,7 @@ class InvoiceController extends Controller
 
     public function validateWithFbr(Invoice $invoice): RedirectResponse
     {
+        $this->authorizeCurrentEnvironment($invoice);
         ValidateInvoiceWithFbrJob::dispatch($invoice->id);
 
         return back()->with('status', 'FBR validation queued.');
@@ -116,6 +126,7 @@ class InvoiceController extends Controller
 
     public function submitToFbr(Invoice $invoice): RedirectResponse
     {
+        $this->authorizeCurrentEnvironment($invoice);
         SubmitInvoiceToFbrJob::dispatch($invoice->id);
 
         return back()->with('status', 'FBR submission queued.');
@@ -123,6 +134,7 @@ class InvoiceController extends Controller
 
     public function print(Invoice $invoice): View
     {
+        $this->authorizeCurrentEnvironment($invoice);
         $invoice->load(['items', 'customer', 'saleOriginProvince', 'destinationProvince']);
 
         $qrCodeService = app(InvoiceQrCodeService::class);
@@ -136,6 +148,7 @@ class InvoiceController extends Controller
 
     public function downloadPdf(Invoice $invoice)
     {
+        $this->authorizeCurrentEnvironment($invoice);
         $invoice->load(['items', 'customer', 'saleOriginProvince', 'destinationProvince']);
 
         $qrCodeService = app(InvoiceQrCodeService::class);
@@ -176,6 +189,11 @@ class InvoiceController extends Controller
 
         $invoice->refresh()->load('items');
         $invoice->recalculateTotals();
+    }
+
+    private function authorizeCurrentEnvironment(Invoice $invoice): void
+    {
+        abort_unless($this->environmentContext->isCurrent($invoice->environment), 404);
     }
 
     private function formData(Invoice $invoice): array
@@ -337,6 +355,7 @@ class InvoiceController extends Controller
         $datePart = Str::of($invoiceDate)->replace('-', '')->value();
 
         $latestNumber = Invoice::query()
+            ->where('environment', $this->environmentContext->current())
             ->whereDate('invoice_date', $invoiceDate)
             ->where('invoice_number', 'like', 'INV-'.$datePart.'-%')
             ->orderByDesc('invoice_number')

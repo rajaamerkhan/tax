@@ -16,7 +16,7 @@ class Invoice extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'invoice_number', 'invoice_date', 'invoice_type', 'scenario_id', 'sale_origin_province_id',
+        'invoice_number', 'invoice_date', 'invoice_type', 'environment', 'scenario_id', 'sale_origin_province_id',
         'destination_province_id', 'customer_id', 'buyer_name', 'buyer_ntn_cnic', 'buyer_strn',
         'buyer_address', 'notes', 'status', 'fbr_invoice_id', 'fbr_submitted_at', 'editable_until', 'locked_at',
         'fbr_response_json', 'error_message', 'qr_code_path', 'pdf_path', 'value_excluding_sales_tax', 'sales_tax_amount',

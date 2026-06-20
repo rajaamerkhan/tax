@@ -18,7 +18,8 @@
     <aside class="sidebar">
         <div>
             <div class="brand">{{ config('app.name') }}</div>
-            <div class="env-badge env-{{ config('fbr.env') }}">{{ strtoupper(config('fbr.env')) }}</div>
+            @php($currentFbrEnvironment = app(\App\Support\FbrEnvironmentContext::class)->current())
+            <div class="env-badge env-{{ $currentFbrEnvironment }}">{{ strtoupper($currentFbrEnvironment) }}</div>
             <nav class="nav flex-column menu mt-4">
                 <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
                 <a class="nav-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" href="{{ route('invoices.index') }}"><i class="bi bi-receipt-cutoff"></i> Invoices</a>
@@ -56,6 +57,9 @@
 
         @if(session('status'))
             <div class="alert alert-success border-0 shadow-sm">{{ session('status') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="alert alert-danger border-0 shadow-sm">{{ session('error') }}</div>
         @endif
         @if($errors->any())
             <div class="alert alert-danger border-0 shadow-sm">

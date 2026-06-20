@@ -5,14 +5,19 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceStatus;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Support\FbrEnvironmentContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly FbrEnvironmentContext $environmentContext) {}
+
     public function __invoke(): View
     {
+        $environment = $this->environmentContext->current();
         $monthly = Invoice::query()
+            ->where('environment', $environment)
             ->whereDate('invoice_date', '>=', now()->startOfMonth()->subMonths(11))
             ->orderBy('invoice_date')
             ->get();
@@ -26,11 +31,14 @@ class DashboardController extends Controller
             ])
             ->values();
 
-        $submissionAttempts = Invoice::query()->whereNotNull('fbr_submitted_at')->count();
-        $submissionSuccess = Invoice::query()->whereIn('status', [InvoiceStatus::Submitted->value, InvoiceStatus::Editable->value, InvoiceStatus::Locked->value])->count();
+        $submissionAttempts = Invoice::query()->where('environment', $environment)->whereNotNull('fbr_submitted_at')->count();
+        $submissionSuccess = Invoice::query()->where('environment', $environment)->whereIn('status', [InvoiceStatus::Submitted->value, InvoiceStatus::Editable->value, InvoiceStatus::Locked->value])->count();
 
         $topCustomers = Customer::query()
-            ->leftJoin('invoices', 'customers.id', '=', 'invoices.customer_id')
+            ->leftJoin('invoices', function ($join) use ($environment): void {
+                $join->on('customers.id', '=', 'invoices.customer_id')
+                    ->where('invoices.environment', $environment);
+            })
             ->select('customers.name')
             ->selectRaw('COUNT(invoices.id) as invoice_count')
             ->selectRaw('COALESCE(SUM(invoices.grand_total),0) as total_revenue')
@@ -40,15 +48,15 @@ class DashboardController extends Controller
             ->get();
 
         return view('dashboard.index', [
-            'totalInvoices' => Invoice::count(),
-            'totalTaxAmount' => Invoice::all()->sum(fn (Invoice $invoice) => $invoice->sales_tax_amount + $invoice->extra_tax_amount + $invoice->further_tax_amount + $invoice->fed_amount),
-            'pendingFbrSubmissions' => Invoice::whereIn('status', [InvoiceStatus::Validated->value, InvoiceStatus::Failed->value])->count(),
+            'totalInvoices' => Invoice::where('environment', $environment)->count(),
+            'totalTaxAmount' => Invoice::where('environment', $environment)->get()->sum(fn (Invoice $invoice) => $invoice->sales_tax_amount + $invoice->extra_tax_amount + $invoice->further_tax_amount + $invoice->fed_amount),
+            'pendingFbrSubmissions' => Invoice::where('environment', $environment)->whereIn('status', [InvoiceStatus::Validated->value, InvoiceStatus::Failed->value])->count(),
             'totalCustomers' => Customer::count(),
             'monthlyLabels' => $monthlyGrouped->pluck('month'),
             'monthlyRevenue' => $monthlyGrouped->pluck('revenue'),
             'monthlyInvoiceCount' => $monthlyGrouped->pluck('invoice_count'),
             'submissionSuccessRate' => $submissionAttempts > 0 ? round(($submissionSuccess / $submissionAttempts) * 100, 2) : 0,
-            'recentInvoices' => Invoice::latest()->limit(8)->get(),
+            'recentInvoices' => Invoice::where('environment', $environment)->latest()->limit(8)->get(),
             'topCustomers' => $topCustomers,
         ]);
     }

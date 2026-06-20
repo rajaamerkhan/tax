@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Imports\InvoiceDraftImport;
 use App\Http\Requests\InvoiceImportRequest;
+use App\Imports\InvoiceDraftImport;
 use App\Models\Invoice;
 use App\Models\InvoiceImportBatch;
+use App\Support\FbrEnvironmentContext;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -16,6 +16,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class InvoiceImportController extends Controller
 {
+    public function __construct(private readonly FbrEnvironmentContext $environmentContext) {}
+
     public function index(): View
     {
         return view('imports.index', [
@@ -25,7 +27,7 @@ class InvoiceImportController extends Controller
 
     public function preview(InvoiceImportRequest $request): RedirectResponse
     {
-        $import = new InvoiceDraftImport();
+        $import = new InvoiceDraftImport;
         Excel::import($import, $request->file('file'));
 
         $rows = $import->rows ?? collect();
@@ -76,6 +78,7 @@ class InvoiceImportController extends Controller
                 'invoice_number' => $invoiceNumber ?: 'IMP-'.Str::upper(Str::random(8)),
                 'invoice_date' => Carbon::parse($first['invoice_date'])->toDateString(),
                 'invoice_type' => $first['invoice_type'] ?: 'Sale Invoice',
+                'environment' => $this->environmentContext->current(),
                 'buyer_name' => $first['buyer_name'],
                 'buyer_ntn_cnic' => $first['buyer_ntn_cnic'],
                 'buyer_strn' => $first['buyer_strn'],

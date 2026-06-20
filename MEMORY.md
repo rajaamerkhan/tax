@@ -17,6 +17,9 @@
   - Validate endpoint: `/di_data/v1/di/validateinvoicedata`
 - Placeholder token values `N/A`, `NA`, `null`, and blank are treated as no bearer token.
 - FBR API bearer token is read from the company profile `fbr_token` saved in the portal; `.env` `FBR_SECURITY_TOKEN` is only a fallback when the portal token is blank or placeholder.
+- Current FBR environment is read from the company profile `fbr_environment`, not `.env`, for UI badges and runtime invoice behavior.
+- Invoices store an `environment` value; invoice lists, dashboards, mock console logs, imports, demo invoices, validation/submission jobs, and invoice route access should be scoped to the current company profile environment.
+- Existing invoices introduced before environment scoping are treated/backfilled as `sandbox`.
 - Company profile includes sandbox `Business Nature`; for `Distributor`, mock FBR validation should assume all distributor sectors and allow the union of their sandbox scenarios/sale types, with `.env` mock allowlists only as fallback when no profile rule applies.
 - FBR invoice request payload should follow the official JSON shape with top-level seller/buyer fields and `items`; absent string fields should be sent as empty strings rather than `null`, while documented decimal fields such as `extraTax` stay numeric.
 - STATL uses `GET /dist/v1/statl` with `regno` and `date`; registration type uses `GET /dist/v1/Get_Reg_Type` with `Registration_No`.

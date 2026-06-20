@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CompanyProfile;
 use App\Models\FbrApiLog;
 use App\Models\Invoice;
+use App\Support\FbrEnvironmentContext;
 use App\Support\InvoicePayloadBuilder;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
@@ -12,9 +13,7 @@ use Throwable;
 
 class FbrDigitalInvoiceService
 {
-    public function __construct(private readonly InvoicePayloadBuilder $payloadBuilder)
-    {
-    }
+    public function __construct(private readonly InvoicePayloadBuilder $payloadBuilder, private readonly FbrEnvironmentContext $environmentContext) {}
 
     public function validateInvoice(Invoice $invoice): array
     {
@@ -68,7 +67,7 @@ class FbrDigitalInvoiceService
 
     private function currentEnvironment(?CompanyProfile $companyProfile = null): string
     {
-        return $companyProfile?->fbr_environment?->value ?? config('fbr.env');
+        return $companyProfile?->fbr_environment?->value ?? $this->environmentContext->current();
     }
 
     private function invoiceEndpoint(string $key): string

@@ -2,9 +2,12 @@
 
 namespace App\Jobs;
 
+use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Services\FbrDigitalInvoiceService;
 use App\Services\InvoiceSubmissionFinalizer;
+use App\Support\AuditLogger;
+use App\Support\FbrEnvironmentContext;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -15,13 +18,15 @@ class SubmitInvoiceToFbrJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public readonly int $invoiceId)
-    {
-    }
+    public function __construct(public readonly int $invoiceId) {}
 
-    public function handle(FbrDigitalInvoiceService $service, InvoiceSubmissionFinalizer $finalizer): void
+    public function handle(FbrDigitalInvoiceService $service, InvoiceSubmissionFinalizer $finalizer, FbrEnvironmentContext $environmentContext): void
     {
         $invoice = Invoice::query()->with(['customer', 'items'])->findOrFail($this->invoiceId);
+        if (! $environmentContext->isCurrent($invoice->environment)) {
+            return;
+        }
+
         $response = $service->submitInvoice($invoice);
         $finalizer->finalize($invoice, $response);
     }
@@ -34,7 +39,7 @@ class SubmitInvoiceToFbrJob implements ShouldQueue
         }
 
         $invoice->update([
-            'status' => \App\Enums\InvoiceStatus::Failed,
+            'status' => InvoiceStatus::Failed,
             'error_message' => $exception?->getMessage(),
         ]);
 

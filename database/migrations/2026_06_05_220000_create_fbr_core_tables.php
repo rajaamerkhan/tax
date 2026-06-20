@@ -110,9 +110,10 @@ return new class extends Migration
 
         Schema::create('invoices', function (Blueprint $table): void {
             $table->id();
-            $table->string('invoice_number')->unique();
+            $table->string('invoice_number');
             $table->date('invoice_date');
             $table->string('invoice_type');
+            $table->string('environment')->default(FbrEnvironment::Sandbox->value)->index();
             $table->foreignId('scenario_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('sale_origin_province_id')->nullable()->constrained('provinces')->nullOnDelete();
             $table->foreignId('destination_province_id')->nullable()->constrained('provinces')->nullOnDelete();
@@ -140,6 +141,7 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
+            $table->unique(['environment', 'invoice_number']);
         });
 
         Schema::create('invoice_items', function (Blueprint $table): void {

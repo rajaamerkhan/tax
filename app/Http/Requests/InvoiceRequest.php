@@ -2,10 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Support\FbrEnvironmentContext;
 use App\Support\PakistanTaxHelper;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Contracts\Validation\Validator;
 
 class InvoiceRequest extends FormRequest
 {
@@ -17,7 +18,14 @@ class InvoiceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'invoice_number' => ['required', 'string', 'max:100', Rule::unique('invoices', 'invoice_number')->ignore($this->route('invoice'))],
+            'invoice_number' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('invoices', 'invoice_number')
+                    ->where('environment', app(FbrEnvironmentContext::class)->current())
+                    ->ignore($this->route('invoice')),
+            ],
             'invoice_date' => ['required', 'date'],
             'invoice_type' => ['required', 'string', 'in:Sale Invoice'],
             'scenario_id' => ['nullable', 'exists:scenarios,id'],
