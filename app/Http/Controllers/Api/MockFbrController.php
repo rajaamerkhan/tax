@@ -283,6 +283,17 @@ class MockFbrController extends Controller
             ]];
         }
 
+        $buyerRegistrationType = Str::lower((string) Arr::get($payload, 'buyerRegistrationType', ''));
+        $registeredOnlyScenarios = ['SN001', 'SN009'];
+
+        if ($sandbox && in_array($scenarioId, $registeredOnlyScenarios, true) && $buyerRegistrationType !== 'registered') {
+            return [[
+                'errorCode' => '0205',
+                'error' => 'Provided scenario not valid for unregistered user',
+                'topLevel' => true,
+            ]];
+        }
+
         $items = Arr::wrap($payload['items'] ?? []);
         if ($items === []) {
             return [[

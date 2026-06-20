@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\CompanyProfile;
+use App\Support\FbrDemoScenarioFixtures;
+use App\Support\FbrSandboxProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -189,6 +191,57 @@ class MockFbrApiTest extends TestCase
             ->assertJsonPath('validationResponse.invoiceStatuses.0.statusCode', '00');
     }
 
+    #[Test]
+    public function every_distributor_demo_fixture_validates_against_the_mock_sandbox_endpoint(): void
+    {
+        config()->set('fbr.security_token', 'mock-fbr-token');
+
+        CompanyProfile::create([
+            'name' => 'Demo Seller',
+            'ntn_cnic' => '1234567',
+            'fbr_environment' => 'sandbox',
+            'fbr_business_nature' => 'distributor',
+        ]);
+
+        $scenarioCodes = FbrSandboxProfile::allowedScenariosForBusinessNature('distributor');
+        sort($scenarioCodes);
+
+        $this->assertSame(
+            array_map(fn (int $number): string => 'SN'.str_pad((string) $number, 3, '0', STR_PAD_LEFT), range(1, 28)),
+            $scenarioCodes,
+        );
+
+        foreach ($scenarioCodes as $scenarioCode) {
+            $fixture = FbrDemoScenarioFixtures::fixtureByCode($scenarioCode);
+            $this->assertNotNull($fixture, "Missing fixture for {$scenarioCode}");
+
+            $response = $this->withHeader('Authorization', 'Bearer mock-fbr-token')
+                ->postJson('/api/mock/fbr/di_data/v1/di/validateinvoicedata_sb', $this->payloadFromFixture($fixture));
+
+            $response->assertOk()
+                ->assertJsonPath('validationResponse.status', 'Valid')
+                ->assertJsonPath('validationResponse.invoiceStatuses.0.statusCode', '00');
+        }
+    }
+
+    #[Test]
+    public function mock_validate_endpoint_rejects_registered_only_scenarios_for_unregistered_buyers(): void
+    {
+        config()->set('fbr.security_token', 'mock-fbr-token');
+
+        $payload = $this->validPayload([
+            'scenarioId' => 'SN001',
+            'buyerRegistrationType' => 'Unregistered',
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer mock-fbr-token')
+            ->postJson('/api/mock/fbr/di_data/v1/di/validateinvoicedata_sb', $payload);
+
+        $response->assertOk()
+            ->assertJsonPath('validationResponse.status', 'Invalid')
+            ->assertJsonPath('validationResponse.invoiceStatuses.0.errorCode', '0205');
+    }
+
     private function validPayload(array $overrides = []): array
     {
         return array_replace_recursive([
@@ -225,5 +278,52 @@ class MockFbrApiTest extends TestCase
                 'sroItemSerialNo' => '',
             ]],
         ], $overrides);
+    }
+
+    private function payloadFromFixture(array $fixture): array
+    {
+        $taxAmount = round($fixture['unit_price'] - ($fixture['unit_price'] / (1 + ($fixture['rate_percent'] / 100))), 2);
+        $valueExcludingSalesTax = round($fixture['unit_price'] - $taxAmount, 2);
+
+        $item = array_replace([
+            'hsCode' => $fixture['hs_code'],
+            'productDescription' => $fixture['description'],
+            'rate' => $fixture['rate_label'],
+            'uoM' => $fixture['uom'],
+            'quantity' => (float) $fixture['quantity'],
+            'totalValues' => (float) $fixture['unit_price'],
+            'valueSalesExcludingST' => $valueExcludingSalesTax,
+            'fixedNotifiedValueOrRetailPrice' => (float) $fixture['fixed_notified_value'],
+            'salesTaxApplicable' => $taxAmount,
+            'salesTaxWithheldAtSource' => 0.00,
+            'extraTax' => 0.00,
+            'furtherTax' => 0.00,
+            'sroScheduleNo' => $fixture['sro_schedule_number'],
+            'fedPayable' => 0.00,
+            'discount' => 0.00,
+            'saleType' => $fixture['sale_type'],
+            'sroItemSerialNo' => $fixture['item_serial_number'],
+        ], [
+            'valueSalesExcludingST' => $fixture['payload_overrides']['value_excluding_sales_tax'] ?? $valueExcludingSalesTax,
+            'salesTaxApplicable' => $fixture['payload_overrides']['sales_tax'] ?? $taxAmount,
+            'totalValues' => $fixture['payload_overrides']['total_value'] ?? (float) $fixture['unit_price'],
+        ]);
+
+        return [
+            'invoiceType' => 'Sale Invoice',
+            'invoiceDate' => '2025-04-21',
+            'sellerNTNCNIC' => '1234567',
+            'sellerBusinessName' => 'Company 8',
+            'sellerProvince' => 'Sindh',
+            'sellerAddress' => 'Karachi',
+            'buyerNTNCNIC' => $fixture['buyer_ntn_cnic'],
+            'buyerBusinessName' => $fixture['buyer_name'],
+            'buyerProvince' => 'Sindh',
+            'buyerAddress' => $fixture['buyer_address'],
+            'buyerRegistrationType' => ucfirst($fixture['buyer_type']),
+            'invoiceRefNo' => '',
+            'scenarioId' => $fixture['scenario_code'],
+            'items' => [$item],
+        ];
     }
 }

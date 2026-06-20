@@ -29,7 +29,13 @@ class InvoicePayloadBuilder
             'items' => $invoice->items->map(fn ($item) => [
                 'hsCode' => $item->hs_code ?: $item->hsCodeRelation?->code ?: '',
                 'productDescription' => $item->description ?: '',
-                'rate' => rtrim(rtrim(number_format((float) $item->rate_percent, 2, '.', ''), '0'), '.').'%',
+                'rate' => match ($item->sale_type) {
+                    'Exempt Goods' => 'Exempt',
+                    'Cement /Concrete Block' => 'Rs.'.rtrim(rtrim(number_format((float) $item->rate_percent, 2, '.', ''), '0'), '.'),
+                    'Potassium Chlorate' => '18% along with rupees 60 per kilogram',
+                    'CNG Sales' => 'Rs.'.rtrim(rtrim(number_format((float) $item->rate_percent, 2, '.', ''), '0'), '.'),
+                    default => rtrim(rtrim(number_format((float) $item->rate_percent, 2, '.', ''), '0'), '.').'%',
+                },
                 'uoM' => $item->uom ?: $item->uomRelation?->name ?: $item->uomRelation?->code ?: '',
                 'quantity' => (float) $item->quantity,
                 'totalValues' => (float) $item->total_value,
@@ -37,7 +43,7 @@ class InvoicePayloadBuilder
                 'fixedNotifiedValueOrRetailPrice' => $item->fixed_notified_value !== null ? (float) $item->fixed_notified_value : 0.0,
                 'salesTaxApplicable' => (float) $item->sales_tax,
                 'salesTaxWithheldAtSource' => 0.0,
-                'extraTax' => (float) $item->extra_tax,
+                'extraTax' => in_array($item->sale_type, ['Goods at Reduced Rate', 'Exempt Goods', 'Goods at zero-rate'], true) ? '' : (float) $item->extra_tax,
                 'furtherTax' => (float) $item->further_tax,
                 'sroScheduleNo' => $item->sro_schedule_number ?: '',
                 'fedPayable' => (float) $item->fed_payable,

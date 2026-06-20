@@ -50,7 +50,9 @@ class DemoInvoiceController extends Controller
             ['name' => $fixture['scenario_name'], 'document_type_id' => '1'],
         );
         $originProvince = Province::query()->find($company->province_id) ?? Province::query()->first();
-        $destinationProvince = Province::query()->whereKeyNot($originProvince?->id)->first() ?? $originProvince;
+        $destinationProvince = Province::query()->where('name', 'Sindh')->first()
+            ?? Province::query()->whereKeyNot($originProvince?->id)->first()
+            ?? $originProvince;
         $customer = Customer::query()->updateOrCreate(
             ['name' => $fixture['buyer_name']],
             [
@@ -119,8 +121,8 @@ class DemoInvoiceController extends Controller
             'fed_payable' => 0,
             'fixed_notified_value' => $fixture['fixed_notified_value'],
             'sale_type' => $fixture['sale_type'],
-            'sro_schedule_number' => '',
-            'item_serial_number' => '',
+            'sro_schedule_number' => $fixture['sro_schedule_number'],
+            'item_serial_number' => $fixture['item_serial_number'],
         ]);
 
         if ($fixture['payload_overrides'] !== []) {

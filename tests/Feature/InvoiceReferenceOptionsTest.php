@@ -9,6 +9,7 @@ use App\Models\SaleType;
 use App\Models\Uom;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -34,6 +35,13 @@ class InvoiceReferenceOptionsTest extends TestCase
             'fbr_id' => '18',
         ]);
         $province = Province::first();
+
+        Http::fake([
+            'https://gw.fbr.gov.pk/pdi/v2/SaleTypeToRate*' => Http::response([
+                ['ratE_ID' => 734, 'ratE_DESC' => '18%', 'ratE_VALUE' => 18],
+            ]),
+            'https://gw.fbr.gov.pk/pdi/v1/SroSchedule*' => Http::response([]),
+        ]);
 
         $response = $this->actingAs($admin)->getJson(route('invoices.reference-options', [
             'hs_code_id' => $hsCode->id,
