@@ -55,12 +55,14 @@
         </div>
     </div>
     <div class="col-lg-4">
-        <div class="panel quick-actions">
-            <div class="panel-header"><h2>Quick Actions</h2></div>
-            <a href="{{ route('invoices.create') }}" class="btn btn-primary w-100">Create Invoice</a>
-            <a href="{{ route('imports.index') }}" class="btn btn-outline-light w-100">Import Invoices</a>
-            <a href="{{ route('customers.create') }}" class="btn btn-outline-light w-100">Add Customer</a>
-        </div>
+        @if(auth()->user()?->canEditInvoices())
+            <div class="panel quick-actions">
+                <div class="panel-header"><h2>Quick Actions</h2></div>
+                <a href="{{ route('invoices.create') }}" class="btn btn-primary w-100">Create Invoice</a>
+                <a href="{{ route('imports.index') }}" class="btn btn-outline-light w-100">Import Invoices</a>
+                <a href="{{ route('customers.create') }}" class="btn btn-outline-light w-100">Add Customer</a>
+            </div>
+        @endif
     </div>
 </div>
 @push('scripts')

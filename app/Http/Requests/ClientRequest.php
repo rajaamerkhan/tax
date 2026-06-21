@@ -31,4 +31,19 @@ class ClientRequest extends FormRequest
             'admin_password' => [($client && $admin) ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        $data = [];
+
+        foreach (['email', 'admin_email'] as $field) {
+            if ($this->has($field)) {
+                $data[$field] = strtolower(trim((string) $this->input($field)));
+            }
+        }
+
+        if ($data !== []) {
+            $this->merge($data);
+        }
+    }
 }

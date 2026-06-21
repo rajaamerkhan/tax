@@ -36,9 +36,12 @@
                     <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
                     <a class="nav-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" href="{{ route('invoices.index') }}"><i class="bi bi-receipt-cutoff"></i> Invoices</a>
                     <a class="nav-link {{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}"><i class="bi bi-people"></i> Customers</a>
-                    <a class="nav-link {{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.index') }}"><i class="bi bi-upload"></i> Import</a>
+                    @if(auth()->user()?->canEditInvoices())
+                        <a class="nav-link {{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.index') }}"><i class="bi bi-upload"></i> Import</a>
+                    @endif
                 @endif
                 @if(auth()->user()?->canManageSettings())
+                    <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}"><i class="bi bi-person-gear"></i> Users</a>
                     <a class="nav-link {{ request()->routeIs('company.*') ? 'active' : '' }}" href="{{ route('company.edit') }}"><i class="bi bi-building"></i> Company</a>
                     <a class="nav-link {{ request()->routeIs('reference-data.*') ? 'active' : '' }}" href="{{ route('reference-data.index') }}"><i class="bi bi-diagram-3"></i> Reference Data</a>
                     <a class="nav-link {{ request()->routeIs('admin.mock-fbr-console') ? 'active' : '' }}" href="{{ route('admin.mock-fbr-console') }}"><i class="bi bi-terminal"></i> Mock FBR Console</a>
@@ -68,7 +71,7 @@
                 <div class="text-secondary small">Realtime invoicing workflow for Pakistan FBR / PRAL</div>
             </div>
             <div class="d-flex align-items-center gap-3">
-                @if(! auth()->user()?->isOwner() || $isManagingClient)
+                @if((! auth()->user()?->isOwner() || $isManagingClient) && auth()->user()?->canEditInvoices())
                     <a href="{{ route('invoices.create') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Invoice</a>
                 @endif
                 <form method="POST" action="{{ route('logout') }}">

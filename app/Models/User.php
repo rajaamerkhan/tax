@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 #[Fillable(['client_id', 'name', 'email', 'phone', 'role', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -27,6 +28,11 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
         ];
+    }
+
+    public function setEmailAttribute(?string $value): void
+    {
+        $this->attributes['email'] = $value === null ? null : Str::lower(trim($value));
     }
 
     public function invoices(): HasMany

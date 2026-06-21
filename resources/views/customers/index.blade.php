@@ -2,7 +2,12 @@
 @section('title', 'Customers')
 @section('content')
 <div class="panel">
-    <div class="panel-header d-flex justify-content-between align-items-center"><h2>Customers</h2><a href="{{ route('customers.create') }}" class="btn btn-primary">New Customer</a></div>
+    <div class="panel-header d-flex justify-content-between align-items-center">
+        <h2>Customers</h2>
+        @if(auth()->user()?->canEditInvoices())
+            <a href="{{ route('customers.create') }}" class="btn btn-primary">New Customer</a>
+        @endif
+    </div>
     <form class="row g-3 mb-3"><div class="col-md-4"><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Search by name, CNIC/NTN, STRN"></div><div class="col-md-2"><button class="btn btn-outline-light w-100">Search</button></div></form>
     <div class="table-responsive">
         <table class="table align-middle">

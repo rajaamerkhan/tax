@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\MockFbrConsoleController;
 use App\Http\Controllers\Admin\ReferenceDataController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ClientUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceVerificationController;
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function (): void {
     });
 
     Route::middleware('role:admin')->group(function (): void {
+        Route::resource('users', ClientUserController::class)->except(['show']);
         Route::get('/company', [CompanyProfileController::class, 'edit'])->name('company.edit');
         Route::put('/company', [CompanyProfileController::class, 'update'])->name('company.update');
         Route::post('/company/sync-references', [CompanyProfileController::class, 'syncReferences'])->name('company.sync-references');
@@ -56,6 +58,9 @@ Route::middleware('auth')->group(function (): void {
 
     Route::middleware('role:admin,accountant')->group(function (): void {
         Route::resource('customers', CustomerController::class)->except(['index', 'show']);
+        Route::get('/imports', [InvoiceImportController::class, 'index'])->name('imports.index');
+        Route::get('/imports/template', [InvoiceImportController::class, 'sampleTemplate'])->name('imports.template');
+        Route::get('/imports/{import}', [InvoiceImportController::class, 'show'])->name('imports.show');
         Route::post('/imports/preview', [InvoiceImportController::class, 'preview'])->name('imports.preview');
         Route::post('/imports/{import}', [InvoiceImportController::class, 'store'])->name('imports.store');
         Route::resource('invoices', InvoiceController::class)->except(['index', 'show']);
@@ -63,9 +68,6 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/invoices/{invoice}/submit-fbr', [InvoiceController::class, 'submitToFbr'])->name('invoices.submit-fbr');
     });
 
-    Route::get('/imports', [InvoiceImportController::class, 'index'])->name('imports.index');
-    Route::get('/imports/template', [InvoiceImportController::class, 'sampleTemplate'])->name('imports.template');
-    Route::get('/imports/{import}', [InvoiceImportController::class, 'show'])->name('imports.show');
     Route::resource('customers', CustomerController::class)->only(['index', 'show']);
     Route::get('/invoice-autocomplete/{resource}', InvoiceAutocompleteController::class)->name('invoices.autocomplete');
     Route::get('/invoice-reference-options', InvoiceReferenceController::class)->name('invoices.reference-options');

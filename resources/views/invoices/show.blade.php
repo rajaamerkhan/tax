@@ -28,17 +28,19 @@
             </div>
         </div>
         <div class="invoice-detail-hero-actions">
-            @if(! $invoice->isLocked())
-                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-outline-light">Edit Invoice</a>
+            @if(auth()->user()?->canEditInvoices())
+                @if(! $invoice->isLocked())
+                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-outline-light">Edit Invoice</a>
+                @endif
+                <form method="POST" action="{{ route('invoices.validate-fbr', $invoice) }}">
+                    @csrf
+                    <button class="btn btn-outline-light">Validate with FBR</button>
+                </form>
+                <form method="POST" action="{{ route('invoices.submit-fbr', $invoice) }}">
+                    @csrf
+                    <button class="btn btn-primary">Submit to FBR</button>
+                </form>
             @endif
-            <form method="POST" action="{{ route('invoices.validate-fbr', $invoice) }}">
-                @csrf
-                <button class="btn btn-outline-light">Validate with FBR</button>
-            </form>
-            <form method="POST" action="{{ route('invoices.submit-fbr', $invoice) }}">
-                @csrf
-                <button class="btn btn-primary">Submit to FBR</button>
-            </form>
             <a href="{{ route('invoices.print', $invoice) }}" target="_blank" class="btn btn-outline-light">Print</a>
             <a href="{{ route('invoices.download-pdf', $invoice) }}" class="btn btn-outline-light">Download PDF</a>
         </div>

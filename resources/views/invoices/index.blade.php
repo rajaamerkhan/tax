@@ -2,7 +2,12 @@
 @section('title', 'Invoices')
 @section('content')
 <div class="panel">
-    <div class="panel-header d-flex justify-content-between align-items-center"><h2>Invoices</h2><a href="{{ route('invoices.create') }}" class="btn btn-primary">Create Invoice</a></div>
+    <div class="panel-header d-flex justify-content-between align-items-center">
+        <h2>Invoices</h2>
+        @if(auth()->user()?->canEditInvoices())
+            <a href="{{ route('invoices.create') }}" class="btn btn-primary">Create Invoice</a>
+        @endif
+    </div>
     <form class="row g-3 mb-3">
         <div class="col-md-3"><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Invoice / buyer / NTN"></div>
         <div class="col-md-2"><select class="form-select" name="status"><option value="">All Statuses</option>@foreach(['draft','validated','submitted','failed','editable','locked','cancelled'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>@endforeach</select></div>

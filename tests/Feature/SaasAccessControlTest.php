@@ -46,6 +46,29 @@ class SaasAccessControlTest extends TestCase
     }
 
     #[Test]
+    public function owner_cannot_reuse_an_existing_user_email_for_a_new_client_admin(): void
+    {
+        $owner = User::factory()->create([
+            'client_id' => null,
+            'role' => UserRole::Owner,
+        ]);
+        User::factory()->create([
+            'email' => 'existing@example.test',
+            'role' => UserRole::Admin,
+        ]);
+
+        $this->actingAs($owner)->post(route('owner.clients.store'), [
+            'name' => 'Second Client',
+            'email' => 'client@example.test',
+            'phone' => null,
+            'status' => 'active',
+            'admin_email' => 'EXISTING@EXAMPLE.TEST',
+            'admin_password' => 'secure-password',
+            'admin_password_confirmation' => 'secure-password',
+        ])->assertSessionHasErrors('admin_email');
+    }
+
+    #[Test]
     public function client_users_cannot_view_or_list_another_clients_invoices(): void
     {
         [$clientUser, $ownInvoice] = $this->clientWithInvoice('Client A', 'A-INV-1', 'Own Buyer');

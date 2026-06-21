@@ -23,4 +23,13 @@ class ProfileUpdateRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:50'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('email')) {
+            $this->merge([
+                'email' => strtolower(trim((string) $this->input('email'))),
+            ]);
+        }
+    }
 }
