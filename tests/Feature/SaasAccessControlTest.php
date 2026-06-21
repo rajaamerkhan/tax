@@ -105,7 +105,10 @@ class SaasAccessControlTest extends TestCase
             ->assertSee('Customers')
             ->assertSee('Import')
             ->assertSee('Company')
-            ->assertSee('Exit Client');
+            ->assertSee('Profile')
+            ->assertSee('Exit Client')
+            ->assertDontSee('building-add')
+            ->assertDontSee('Clients</a>', false);
     }
 
     #[Test]
@@ -125,6 +128,55 @@ class SaasAccessControlTest extends TestCase
             ->assertSee($ownInvoice->invoice_number)
             ->assertDontSee($otherInvoice->invoice_number)
             ->assertDontSee('Other Buyer');
+    }
+
+    #[Test]
+    public function owner_manage_mode_profile_belongs_to_selected_client_user(): void
+    {
+        $owner = User::factory()->create([
+            'client_id' => null,
+            'name' => 'Real Owner',
+            'email' => 'owner@example.test',
+            'role' => UserRole::Owner,
+        ]);
+        $client = Client::factory()->create(['name' => 'Managed Client']);
+        $clientAdmin = User::factory()->create([
+            'client_id' => $client->id,
+            'name' => 'Client Admin',
+            'email' => 'client-admin@example.test',
+            'role' => UserRole::Admin,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['managed_client_id' => $client->id, 'managed_client_name' => $client->name])
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertSee('Editing the selected client account profile')
+            ->assertSee('value="Client Admin"', false)
+            ->assertSee('value="client-admin@example.test"', false)
+            ->assertDontSee('value="Real Owner"', false)
+            ->assertDontSee('Current Password');
+
+        $this->actingAs($owner)
+            ->withSession(['managed_client_id' => $client->id, 'managed_client_name' => $client->name])
+            ->put(route('profile.update'), [
+                'name' => 'Updated Client Admin',
+                'email' => 'updated-client-admin@example.test',
+                'phone' => '+92-300-9999999',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $clientAdmin->id,
+            'client_id' => $client->id,
+            'name' => 'Updated Client Admin',
+            'email' => 'updated-client-admin@example.test',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'id' => $owner->id,
+            'name' => 'Real Owner',
+            'email' => 'owner@example.test',
+        ]);
     }
 
     private function clientWithInvoice(string $clientName, string $invoiceNumber, string $buyerName): array

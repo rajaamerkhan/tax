@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\User;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -39,6 +40,21 @@ class TenantContext
     public function isManagingClient(?User $user = null): bool
     {
         return $user?->isOwner() && $this->clientId($user) !== null;
+    }
+
+    public function clientUser(?User $user = null): ?User
+    {
+        $user ??= Auth::user();
+
+        if (! $this->isManagingClient($user)) {
+            return $user;
+        }
+
+        return User::query()
+            ->where('client_id', $this->clientId($user))
+            ->orderByRaw('CASE WHEN role = ? THEN 0 ELSE 1 END', [UserRole::Admin->value])
+            ->oldest()
+            ->first();
     }
 
     public function companyProfileQuery(?int $clientId = null)

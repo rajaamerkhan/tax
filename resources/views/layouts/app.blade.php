@@ -29,7 +29,7 @@
                 <div class="small text-secondary mt-2">Managing {{ $managedClient->name }}</div>
             @endif
             <nav class="nav flex-column menu mt-4">
-                @if(auth()->user()?->canManageClients())
+                @if(auth()->user()?->canManageClients() && ! $isManagingClient)
                     <a class="nav-link {{ request()->routeIs('owner.clients.*') ? 'active' : '' }}" href="{{ route('owner.clients.index') }}"><i class="bi bi-building-add"></i> Clients</a>
                 @endif
                 @if(! auth()->user()?->isOwner() || $isManagingClient)
@@ -54,8 +54,9 @@
                     <button class="btn btn-sm btn-outline-light w-100">Exit Client</button>
                 </form>
             @endif
-            <div>{{ auth()->user()->name }}</div>
-            <div>{{ auth()->user()->role->label() }}</div>
+            @php($sidebarUser = $isManagingClient ? $tenantContext->clientUser(auth()->user()) : auth()->user())
+            <div>{{ $sidebarUser?->name }}</div>
+            <div>{{ $sidebarUser?->role->label() }}</div>
             <div class="sidebar-version">{{ config('app.name') }} v{{ config('app.version') }}</div>
         </div>
     </aside>
