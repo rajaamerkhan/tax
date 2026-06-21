@@ -25,13 +25,10 @@ class SaasAccessControlTest extends TestCase
 
         $response = $this->actingAs($owner)->post(route('owner.clients.store'), [
             'name' => 'Acme Textiles',
-            'contact_name' => 'Ayesha Khan',
             'email' => 'accounts@acme.test',
             'phone' => '+92-300-0000000',
             'status' => 'active',
-            'admin_name' => 'Acme Admin',
             'admin_email' => 'admin@acme.test',
-            'admin_phone' => '+92-300-1111111',
             'admin_password' => 'secure-password',
             'admin_password_confirmation' => 'secure-password',
         ]);
@@ -42,6 +39,8 @@ class SaasAccessControlTest extends TestCase
         $this->assertDatabaseHas('users', [
             'client_id' => $client->id,
             'email' => 'admin@acme.test',
+            'name' => 'Acme Textiles',
+            'phone' => '+92-300-0000000',
             'role' => UserRole::Admin->value,
         ]);
     }

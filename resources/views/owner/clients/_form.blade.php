@@ -19,10 +19,6 @@
         <input class="form-control" name="phone" value="{{ old('phone', $client->phone) }}">
     </div>
     <div class="col-md-6">
-        <label class="form-label">Contact Name</label>
-        <input class="form-control" name="contact_name" value="{{ old('contact_name', $client->contact_name) }}">
-    </div>
-    <div class="col-md-6">
         <label class="form-label">Client Email</label>
         <input class="form-control" type="email" name="email" value="{{ old('email', $client->email) }}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-no-autofill data-lpignore="true" data-1p-ignore>
     </div>
@@ -32,22 +28,14 @@
     <h2 class="h5 mb-3">Client Login</h2>
     <div class="row g-3">
         <div class="col-md-6">
-            <label class="form-label">Admin Name</label>
-            <input class="form-control" name="admin_name" value="{{ old('admin_name', $admin->name) }}" required>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label">Admin Email</label>
+            <label class="form-label">Login Email</label>
             <input class="form-control" type="email" name="admin_email" value="{{ old('admin_email', $admin->email) }}" required autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-no-autofill data-lpignore="true" data-1p-ignore>
         </div>
-        <div class="col-md-4">
-            <label class="form-label">Admin Phone</label>
-            <input class="form-control" name="admin_phone" value="{{ old('admin_phone', $admin->phone) }}">
-        </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <label class="form-label">{{ $client->exists ? 'New Password' : 'Password' }}</label>
             <input class="form-control" type="password" name="admin_password" autocomplete="new-password" data-no-autofill data-lpignore="true" data-1p-ignore @required(! $client->exists)>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <label class="form-label">Confirm Password</label>
             <input class="form-control" type="password" name="admin_password_confirmation" autocomplete="new-password" data-no-autofill data-lpignore="true" data-1p-ignore @required(! $client->exists)>
         </div>

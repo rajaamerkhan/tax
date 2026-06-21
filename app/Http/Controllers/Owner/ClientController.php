@@ -43,12 +43,14 @@ class ClientController extends Controller
     public function store(ClientRequest $request): RedirectResponse
     {
         $client = DB::transaction(function () use ($request): Client {
-            $client = Client::create($request->safe()->only(['name', 'contact_name', 'email', 'phone', 'status']));
+            $client = Client::create(array_merge($request->safe()->only(['name', 'email', 'phone', 'status']), [
+                'contact_name' => $request->validated('name'),
+            ]));
 
             $client->users()->create([
-                'name' => $request->validated('admin_name'),
+                'name' => $request->validated('name'),
                 'email' => $request->validated('admin_email'),
-                'phone' => $request->validated('admin_phone'),
+                'phone' => $request->validated('phone'),
                 'role' => UserRole::Admin,
                 'password' => $request->validated('admin_password'),
             ]);
@@ -70,14 +72,16 @@ class ClientController extends Controller
     public function update(ClientRequest $request, Client $client): RedirectResponse
     {
         DB::transaction(function () use ($request, $client): void {
-            $client->update($request->safe()->only(['name', 'contact_name', 'email', 'phone', 'status']));
+            $client->update(array_merge($request->safe()->only(['name', 'email', 'phone', 'status']), [
+                'contact_name' => $request->validated('name'),
+            ]));
 
             $admin = $client->users()->where('role', UserRole::Admin->value)->oldest()->first();
             $adminData = [
                 'client_id' => $client->id,
-                'name' => $request->validated('admin_name'),
+                'name' => $request->validated('name'),
                 'email' => $request->validated('admin_email'),
-                'phone' => $request->validated('admin_phone'),
+                'phone' => $request->validated('phone'),
                 'role' => UserRole::Admin,
             ];
 
