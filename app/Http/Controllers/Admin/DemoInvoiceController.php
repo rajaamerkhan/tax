@@ -17,17 +17,24 @@ use App\Services\FbrDigitalInvoiceService;
 use App\Services\InvoiceSubmissionFinalizer;
 use App\Support\FbrDemoScenarioFixtures;
 use App\Support\FbrEnvironmentContext;
+use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Throwable;
 
 class DemoInvoiceController extends Controller
 {
-    public function __construct(private readonly FbrEnvironmentContext $environmentContext) {}
+    public function __construct(
+        private readonly FbrEnvironmentContext $environmentContext,
+        private readonly TenantContext $tenantContext,
+    ) {}
 
     public function __invoke(Request $request, FbrDigitalInvoiceService $service, InvoiceSubmissionFinalizer $finalizer): RedirectResponse
     {
-        $company = CompanyProfile::query()->firstOrFail();
+        $clientId = $this->tenantContext->clientId($request->user());
+        $company = CompanyProfile::query()->where('client_id', $clientId)->firstOrFail();
 
         if ($company->fbr_environment?->value !== 'sandbox') {
             return redirect()->route('admin.mock-fbr-console')
@@ -54,8 +61,9 @@ class DemoInvoiceController extends Controller
             ?? Province::query()->whereKeyNot($originProvince?->id)->first()
             ?? $originProvince;
         $customer = Customer::query()->updateOrCreate(
-            ['name' => $fixture['buyer_name']],
+            ['client_id' => $clientId, 'name' => $fixture['buyer_name']],
             [
+                'client_id' => $clientId,
                 'ntn_cnic' => $fixture['buyer_ntn_cnic'],
                 'strn' => $fixture['buyer_strn'],
                 'buyer_type' => $fixture['buyer_type'],
@@ -87,6 +95,7 @@ class DemoInvoiceController extends Controller
         );
 
         $invoice = Invoice::create([
+            'client_id' => $clientId,
             'invoice_number' => 'MOCK-'.Str::upper(Str::random(8)),
             'invoice_date' => now()->toDateString(),
             'invoice_type' => 'Sale Invoice',
@@ -132,16 +141,44 @@ class DemoInvoiceController extends Controller
         $invoice->refresh()->load('items');
         $invoice->recalculateTotals();
 
-        $validateResponse = $service->validateInvoice($invoice);
-        $invoice->update([
-            'status' => InvoiceStatus::Validated,
-            'fbr_response_json' => $validateResponse,
-            'error_message' => null,
-        ]);
+        try {
+            $validateResponse = $service->validateInvoice($invoice);
+            $invoice->update([
+                'status' => InvoiceStatus::Validated,
+                'fbr_response_json' => $validateResponse,
+                'error_message' => null,
+            ]);
 
-        $submitResponse = $service->submitInvoice($invoice);
-        $finalizer->finalize($invoice, $submitResponse);
+            $submitResponse = $service->submitInvoice($invoice);
+            $finalizer->finalize($invoice, $submitResponse);
+        } catch (Throwable $exception) {
+            $message = $this->fbrFailureMessage($exception);
+
+            $invoice->update([
+                'status' => InvoiceStatus::Failed,
+                'error_message' => $message,
+            ]);
+
+            return redirect()->route('admin.mock-fbr-console')
+                ->with('error', "Demo invoice {$invoice->invoice_number} could not be submitted: {$message}");
+        }
 
         return redirect()->route('admin.mock-fbr-console')->with('status', "Demo invoice {$invoice->invoice_number} validated and submitted to mock FBR.");
+    }
+
+    private function fbrFailureMessage(Throwable $exception): string
+    {
+        if ($exception instanceof RequestException && $exception->response) {
+            $status = $exception->response->status();
+            $body = $exception->response->json();
+            $message = data_get($body, 'validationResponse.error')
+                ?: data_get($body, 'fault.message')
+                ?: data_get($body, 'message')
+                ?: $exception->response->body();
+
+            return trim("FBR returned HTTP {$status}. ".Str::limit((string) $message, 240));
+        }
+
+        return Str::limit($exception->getMessage(), 240);
     }
 }

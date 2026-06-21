@@ -25,6 +25,8 @@ class CompanyProfileRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'fbr_token' => ['nullable', 'string'],
+            'fbr_sandbox_token' => ['nullable', 'string'],
+            'fbr_production_token' => ['nullable', 'string'],
             'fbr_environment' => ['required', 'in:sandbox,production'],
             'fbr_business_nature' => ['nullable', Rule::in(array_keys(FbrSandboxProfile::businessNatures()))],
         ];

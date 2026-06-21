@@ -3,20 +3,23 @@
 namespace App\Models;
 
 use App\Enums\InvoiceStatus;
+use App\Models\Client;
 use App\Support\InvoiceCalculator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class Invoice extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'invoice_number', 'invoice_date', 'invoice_type', 'environment', 'scenario_id', 'sale_origin_province_id',
+        'client_id', 'invoice_number', 'invoice_date', 'invoice_type', 'environment', 'scenario_id', 'sale_origin_province_id',
         'destination_province_id', 'customer_id', 'buyer_name', 'buyer_ntn_cnic', 'buyer_strn',
         'buyer_address', 'notes', 'status', 'fbr_invoice_id', 'fbr_submitted_at', 'editable_until', 'locked_at',
         'fbr_response_json', 'error_message', 'qr_code_path', 'pdf_path', 'value_excluding_sales_tax', 'sales_tax_amount',
@@ -36,6 +39,15 @@ class Invoice extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (Invoice $invoice): void {
+            $invoice->client_id ??= Auth::user()?->client_id
+                ?? User::query()->whereKey($invoice->created_by)->value('client_id')
+                ?? (Client::query()->count() === 1 ? Client::query()->value('id') : null);
+        });
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
@@ -44,6 +56,11 @@ class Invoice extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
     }
 
     public function scenario(): BelongsTo
@@ -121,5 +138,10 @@ class Invoice extends Model
         );
 
         $this->forceFill($summary)->save();
+    }
+
+    public function scopeForClient(Builder $query, ?int $clientId): Builder
+    {
+        return $query->where($query->getModel()->getTable().'.client_id', $clientId);
     }
 }

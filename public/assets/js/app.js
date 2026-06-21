@@ -60,6 +60,23 @@
         });
     }
 
+    function initNoAutofill(context) {
+        context.querySelectorAll('[data-no-autofill]').forEach((field) => {
+            const unlock = () => {
+                field.readOnly = false;
+                field.removeEventListener('focus', unlock);
+                field.removeEventListener('pointerdown', unlock);
+                field.removeEventListener('keydown', unlock);
+            };
+
+            field.setAttribute('autocomplete', field.type === 'password' ? 'new-password' : 'off');
+            field.setAttribute('readonly', 'readonly');
+            field.addEventListener('focus', unlock);
+            field.addEventListener('pointerdown', unlock);
+            field.addEventListener('keydown', unlock);
+        });
+    }
+
     const itemList = document.getElementById('invoice-items-list');
     if (itemList && window.invoiceFormConfig) {
         const addButton = document.getElementById('add-item-row');
@@ -382,6 +399,7 @@
         syncBuyerFields();
     }
 
+    initNoAutofill(document);
     initSelect2(document);
 
     document.querySelectorAll('.countdown').forEach((element) => {

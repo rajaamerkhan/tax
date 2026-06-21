@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Support\FbrEnvironmentContext;
+use App\Support\TenantContext;
 use App\Support\PakistanTaxHelper;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,6 +24,7 @@ class InvoiceRequest extends FormRequest
                 'string',
                 'max:100',
                 Rule::unique('invoices', 'invoice_number')
+                    ->where('client_id', app(TenantContext::class)->clientId($this->user()))
                     ->where('environment', app(FbrEnvironmentContext::class)->current())
                     ->ignore($this->route('invoice')),
             ],
@@ -31,7 +33,10 @@ class InvoiceRequest extends FormRequest
             'scenario_id' => ['nullable', 'exists:scenarios,id'],
             'sale_origin_province_id' => ['nullable', 'exists:provinces,id'],
             'destination_province_id' => ['nullable', 'exists:provinces,id'],
-            'customer_id' => ['nullable', 'exists:customers,id'],
+            'customer_id' => [
+                'nullable',
+                Rule::exists('customers', 'id')->where('client_id', app(TenantContext::class)->clientId($this->user())),
+            ],
             'buyer_name' => ['nullable', 'string', 'max:255'],
             'buyer_ntn_cnic' => ['nullable', 'ntn'],
             'buyer_strn' => ['nullable', 'string', 'max:100'],

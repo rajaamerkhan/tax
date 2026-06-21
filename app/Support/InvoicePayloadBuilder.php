@@ -7,10 +7,14 @@ use App\Models\Invoice;
 
 class InvoicePayloadBuilder
 {
+    public function __construct(private readonly TenantContext $tenantContext) {}
+
     public function build(Invoice $invoice): array
     {
         $invoice->loadMissing(['items', 'customer', 'saleOriginProvince', 'destinationProvince', 'scenario']);
-        $company = CompanyProfile::query()->first();
+        $company = CompanyProfile::query()
+            ->where('client_id', $this->tenantContext->invoiceClientId($invoice))
+            ->first();
 
         return [
             'invoiceType' => $invoice->invoice_type ?: '',

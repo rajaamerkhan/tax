@@ -23,7 +23,7 @@ class SubmitInvoiceToFbrJob implements ShouldQueue
     public function handle(FbrDigitalInvoiceService $service, InvoiceSubmissionFinalizer $finalizer, FbrEnvironmentContext $environmentContext): void
     {
         $invoice = Invoice::query()->with(['customer', 'items'])->findOrFail($this->invoiceId);
-        if (! $environmentContext->isCurrent($invoice->environment)) {
+        if (! $environmentContext->isCurrent($invoice->environment, $invoice->client_id)) {
             return;
         }
 

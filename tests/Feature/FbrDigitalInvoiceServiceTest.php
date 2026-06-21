@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CompanyProfile;
+use App\Models\Client;
 use App\Models\FbrApiLog;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -25,10 +26,9 @@ class FbrDigitalInvoiceServiceTest extends TestCase
 
         config()->set('fbr.sandbox_base_url', 'https://sandbox.example.test');
         config()->set('fbr.endpoints.validate_invoice', '/validate');
-        config()->set('fbr.security_token', 'env-token');
 
         $province = Province::first();
-        CompanyProfile::query()->first()->update(['fbr_token' => 'portal-token', 'province_id' => $province->id]);
+        CompanyProfile::query()->first()->update(['fbr_sandbox_token' => 'portal-token', 'province_id' => $province->id]);
 
         $user = User::first();
         $invoice = Invoice::create([
@@ -79,9 +79,8 @@ class FbrDigitalInvoiceServiceTest extends TestCase
 
         config()->set('fbr.production_base_url', 'https://gw.example.test');
         config()->set('fbr.endpoints.submit_invoice_production', '/di_data/v1/di/postinvoicedata');
-        config()->set('fbr.security_token', 'env-production-token');
 
-        CompanyProfile::query()->first()->update(['fbr_environment' => 'production', 'fbr_token' => 'portal-production-token']);
+        CompanyProfile::query()->first()->update(['fbr_environment' => 'production', 'fbr_production_token' => 'portal-production-token']);
 
         $invoice = $this->createInvoice();
 
@@ -105,7 +104,7 @@ class FbrDigitalInvoiceServiceTest extends TestCase
     }
 
     #[Test]
-    public function it_uses_env_security_token_when_company_profile_token_is_blank(): void
+    public function it_does_not_use_env_security_token_when_company_profile_token_is_blank(): void
     {
         $this->seed();
 
@@ -121,11 +120,9 @@ class FbrDigitalInvoiceServiceTest extends TestCase
 
         $response = app(FbrDigitalInvoiceService::class)->validateInvoice($invoice);
 
-        $this->assertTrue($response['ok']);
-
         Http::assertSent(function ($request) {
             return $request->url() === 'https://sandbox.example.test/validate'
-                && $request->hasHeader('Authorization', 'Bearer env-token');
+                && ! $request->hasHeader('Authorization');
         });
     }
 
@@ -137,7 +134,7 @@ class FbrDigitalInvoiceServiceTest extends TestCase
         config()->set('fbr.sandbox_base_url', 'https://sandbox.example.test');
         config()->set('fbr.endpoints.validate_invoice', '/validate');
         config()->set('fbr.security_token', '');
-        CompanyProfile::query()->first()->update(['fbr_token' => 'N/A']);
+        CompanyProfile::query()->first()->update(['fbr_sandbox_token' => 'N/A']);
 
         $invoice = $this->createInvoice();
 
@@ -152,6 +149,64 @@ class FbrDigitalInvoiceServiceTest extends TestCase
         Http::assertSent(function ($request) {
             return $request->url() === 'https://sandbox.example.test/validate'
                 && ! $request->hasHeader('Authorization');
+        });
+    }
+
+    #[Test]
+    public function it_uses_the_invoice_clients_fbr_token_only(): void
+    {
+        $this->seed();
+
+        config()->set('fbr.sandbox_base_url', 'https://sandbox.example.test');
+        config()->set('fbr.endpoints.validate_invoice', '/validate');
+        config()->set('fbr.security_token', 'global-token-must-not-be-used');
+
+        CompanyProfile::query()->first()->update(['fbr_sandbox_token' => 'client-a-token']);
+
+        $clientB = Client::factory()->create(['name' => 'Client B']);
+        $userB = User::factory()->create(['client_id' => $clientB->id]);
+        $province = Province::first();
+        CompanyProfile::create([
+            'client_id' => $clientB->id,
+            'name' => 'Client B Seller',
+            'ntn_cnic' => '7654321-0',
+            'province_id' => $province->id,
+            'fbr_environment' => 'sandbox',
+            'fbr_sandbox_token' => 'client-b-token',
+        ]);
+
+        $invoice = Invoice::create([
+            'client_id' => $clientB->id,
+            'invoice_number' => 'INV-FBR-CLIENT-B',
+            'invoice_date' => now()->toDateString(),
+            'invoice_type' => 'Sale Invoice',
+            'sale_origin_province_id' => $province->id,
+            'destination_province_id' => $province->id,
+            'buyer_name' => 'Buyer',
+            'buyer_ntn_cnic' => '1234567-8',
+            'status' => 'draft',
+            'created_by' => $userB->id,
+            'updated_by' => $userB->id,
+        ]);
+        InvoiceItem::create([
+            'invoice_id' => $invoice->id,
+            'description' => 'OPC Cement',
+            'quantity' => 10,
+            'unit_price' => 100,
+            'rate_percent' => 18,
+        ]);
+
+        Http::fake([
+            'https://sandbox.example.test/validate' => Http::response(['ok' => true], 200),
+        ]);
+
+        app(FbrDigitalInvoiceService::class)->validateInvoice($invoice);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://sandbox.example.test/validate'
+                && $request->hasHeader('Authorization', 'Bearer client-b-token')
+                && ! $request->hasHeader('Authorization', 'Bearer client-a-token')
+                && ! $request->hasHeader('Authorization', 'Bearer global-token-must-not-be-used');
         });
     }
 

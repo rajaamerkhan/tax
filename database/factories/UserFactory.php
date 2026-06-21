@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\UserRole;
+use App\Models\Client;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -18,6 +19,7 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            'client_id' => fn () => Client::query()->value('id') ?? Client::factory(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->e164PhoneNumber(),
             'email_verified_at' => now(),

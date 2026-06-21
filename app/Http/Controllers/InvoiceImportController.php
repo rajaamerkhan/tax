@@ -7,6 +7,7 @@ use App\Imports\InvoiceDraftImport;
 use App\Models\Invoice;
 use App\Models\InvoiceImportBatch;
 use App\Support\FbrEnvironmentContext;
+use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
@@ -16,12 +17,15 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class InvoiceImportController extends Controller
 {
-    public function __construct(private readonly FbrEnvironmentContext $environmentContext) {}
+    public function __construct(
+        private readonly FbrEnvironmentContext $environmentContext,
+        private readonly TenantContext $tenantContext,
+    ) {}
 
     public function index(): View
     {
         return view('imports.index', [
-            'batches' => InvoiceImportBatch::latest()->limit(10)->get(),
+            'batches' => InvoiceImportBatch::query()->where('client_id', $this->tenantContext->clientId(auth()->user()))->latest()->limit(10)->get(),
         ]);
     }
 
@@ -50,6 +54,7 @@ class InvoiceImportController extends Controller
         }
 
         $batch = InvoiceImportBatch::create([
+            'client_id' => $this->tenantContext->clientId($request->user()),
             'filename' => $request->file('file')->getClientOriginalName(),
             'preview_rows' => $rows->take(200)->values()->all(),
             'errors' => $errors,
@@ -62,11 +67,14 @@ class InvoiceImportController extends Controller
 
     public function show(InvoiceImportBatch $import): View
     {
+        $this->tenantContext->authorizeModel($import);
+
         return view('imports.show', ['batch' => $import]);
     }
 
     public function store(InvoiceImportBatch $import): RedirectResponse
     {
+        $this->tenantContext->authorizeModel($import);
         abort_if(! empty($import->errors), 422, 'Fix import errors before importing.');
 
         $grouped = collect($import->preview_rows)->groupBy('invoice_number');
@@ -75,6 +83,7 @@ class InvoiceImportController extends Controller
         foreach ($grouped as $invoiceNumber => $rows) {
             $first = $rows->first();
             $invoice = Invoice::create([
+                'client_id' => $import->client_id,
                 'invoice_number' => $invoiceNumber ?: 'IMP-'.Str::upper(Str::random(8)),
                 'invoice_date' => Carbon::parse($first['invoice_date'])->toDateString(),
                 'invoice_type' => $first['invoice_type'] ?: 'Sale Invoice',

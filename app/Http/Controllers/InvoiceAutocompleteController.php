@@ -7,11 +7,14 @@ use App\Models\HsCode;
 use App\Models\Province;
 use App\Models\SaleType;
 use App\Models\Scenario;
+use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class InvoiceAutocompleteController extends Controller
 {
+    public function __construct(private readonly TenantContext $tenantContext) {}
+
     public function __invoke(Request $request, string $resource): JsonResponse
     {
         $term = trim((string) $request->query('q', ''));
@@ -38,6 +41,7 @@ class InvoiceAutocompleteController extends Controller
     private function customers(string $term, int $page, int $perPage): array
     {
         $result = Customer::query()
+            ->forClient($this->tenantContext->clientId(auth()->user()))
             ->when($term !== '', function ($query) use ($term): void {
                 $query->where(function ($inner) use ($term): void {
                     $inner->where('name', 'like', '%'.$term.'%')

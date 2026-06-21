@@ -18,13 +18,26 @@
     <aside class="sidebar">
         <div>
             <div class="brand">{{ config('app.name') }}</div>
-            @php($currentFbrEnvironment = app(\App\Support\FbrEnvironmentContext::class)->current())
-            <div class="env-badge env-{{ $currentFbrEnvironment }}">{{ strtoupper($currentFbrEnvironment) }}</div>
+            @php($tenantContext = app(\App\Support\TenantContext::class))
+            @php($isManagingClient = $tenantContext->isManagingClient(auth()->user()))
+            @php($managedClient = $tenantContext->client(auth()->user()))
+            @unless(auth()->user()?->isOwner() && ! $isManagingClient)
+                @php($currentFbrEnvironment = app(\App\Support\FbrEnvironmentContext::class)->current())
+                <div class="env-badge env-{{ $currentFbrEnvironment }}">{{ strtoupper($currentFbrEnvironment) }}</div>
+            @endunless
+            @if($isManagingClient && $managedClient)
+                <div class="small text-secondary mt-2">Managing {{ $managedClient->name }}</div>
+            @endif
             <nav class="nav flex-column menu mt-4">
-                <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
-                <a class="nav-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" href="{{ route('invoices.index') }}"><i class="bi bi-receipt-cutoff"></i> Invoices</a>
-                <a class="nav-link {{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}"><i class="bi bi-people"></i> Customers</a>
-                <a class="nav-link {{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.index') }}"><i class="bi bi-upload"></i> Import</a>
+                @if(auth()->user()?->canManageClients())
+                    <a class="nav-link {{ request()->routeIs('owner.clients.*') ? 'active' : '' }}" href="{{ route('owner.clients.index') }}"><i class="bi bi-building-add"></i> Clients</a>
+                @endif
+                @if(! auth()->user()?->isOwner() || $isManagingClient)
+                    <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    <a class="nav-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" href="{{ route('invoices.index') }}"><i class="bi bi-receipt-cutoff"></i> Invoices</a>
+                    <a class="nav-link {{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}"><i class="bi bi-people"></i> Customers</a>
+                    <a class="nav-link {{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.index') }}"><i class="bi bi-upload"></i> Import</a>
+                @endif
                 @if(auth()->user()?->canManageSettings())
                     <a class="nav-link {{ request()->routeIs('company.*') ? 'active' : '' }}" href="{{ route('company.edit') }}"><i class="bi bi-building"></i> Company</a>
                     <a class="nav-link {{ request()->routeIs('reference-data.*') ? 'active' : '' }}" href="{{ route('reference-data.index') }}"><i class="bi bi-diagram-3"></i> Reference Data</a>
@@ -34,6 +47,13 @@
             </nav>
         </div>
         <div class="small text-secondary">
+            @if($isManagingClient)
+                <form method="POST" action="{{ route('owner.clients.stop-managing') }}" class="mb-3">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-sm btn-outline-light w-100">Exit Client</button>
+                </form>
+            @endif
             <div>{{ auth()->user()->name }}</div>
             <div>{{ auth()->user()->role->label() }}</div>
             <div class="sidebar-version">{{ config('app.name') }} v{{ config('app.version') }}</div>
@@ -47,7 +67,9 @@
                 <div class="text-secondary small">Realtime invoicing workflow for Pakistan FBR / PRAL</div>
             </div>
             <div class="d-flex align-items-center gap-3">
-                <a href="{{ route('invoices.create') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Invoice</a>
+                @if(! auth()->user()?->isOwner() || $isManagingClient)
+                    <a href="{{ route('invoices.create') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Invoice</a>
+                @endif
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="btn btn-outline-light">Logout</button>

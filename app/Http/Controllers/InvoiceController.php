@@ -15,6 +15,7 @@ use App\Models\SroSchedule;
 use App\Models\TaxRate;
 use App\Services\InvoiceQrCodeService;
 use App\Support\FbrEnvironmentContext;
+use App\Support\TenantContext;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,11 +26,15 @@ use Illuminate\View\View;
 
 class InvoiceController extends Controller
 {
-    public function __construct(private readonly FbrEnvironmentContext $environmentContext) {}
+    public function __construct(
+        private readonly FbrEnvironmentContext $environmentContext,
+        private readonly TenantContext $tenantContext,
+    ) {}
 
     public function index(Request $request): View
     {
         $invoices = Invoice::query()
+            ->forClient($this->tenantContext->clientId($request->user()))
             ->where('environment', $this->environmentContext->current())
             ->with('customer')
             ->when($request->filled('q'), function ($query) use ($request): void {
@@ -73,6 +78,7 @@ class InvoiceController extends Controller
     public function store(InvoiceRequest $request): RedirectResponse
     {
         $invoice = Invoice::create(array_merge($request->safe()->except('items'), [
+            'client_id' => $this->tenantContext->clientId($request->user()),
             'environment' => $this->environmentContext->current(),
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
@@ -86,6 +92,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         $this->authorizeCurrentEnvironment($invoice);
+        $this->tenantContext->authorizeModel($invoice);
         $invoice->load(['items', 'customer', 'saleOriginProvince', 'destinationProvince', 'scenario']);
 
         return view('invoices.show', compact('invoice'));
@@ -94,6 +101,7 @@ class InvoiceController extends Controller
     public function edit(Invoice $invoice): View
     {
         $this->authorizeCurrentEnvironment($invoice);
+        $this->tenantContext->authorizeModel($invoice);
         abort_if($invoice->isLocked(), 422, 'Locked invoices cannot be edited.');
 
         $invoice->load('items');
@@ -104,6 +112,7 @@ class InvoiceController extends Controller
     public function update(InvoiceRequest $request, Invoice $invoice): RedirectResponse
     {
         $this->authorizeCurrentEnvironment($invoice);
+        $this->tenantContext->authorizeModel($invoice);
         abort_if($invoice->isLocked(), 422, 'Locked invoices cannot be edited.');
 
         $invoice->update(array_merge($request->safe()->except('items'), [
@@ -119,6 +128,7 @@ class InvoiceController extends Controller
     public function validateWithFbr(Invoice $invoice): RedirectResponse
     {
         $this->authorizeCurrentEnvironment($invoice);
+        $this->tenantContext->authorizeModel($invoice);
         ValidateInvoiceWithFbrJob::dispatch($invoice->id);
 
         return back()->with('status', 'FBR validation queued.');
@@ -127,6 +137,7 @@ class InvoiceController extends Controller
     public function submitToFbr(Invoice $invoice): RedirectResponse
     {
         $this->authorizeCurrentEnvironment($invoice);
+        $this->tenantContext->authorizeModel($invoice);
         SubmitInvoiceToFbrJob::dispatch($invoice->id);
 
         return back()->with('status', 'FBR submission queued.');
@@ -135,6 +146,7 @@ class InvoiceController extends Controller
     public function print(Invoice $invoice): View
     {
         $this->authorizeCurrentEnvironment($invoice);
+        $this->tenantContext->authorizeModel($invoice);
         $invoice->load(['items', 'customer', 'saleOriginProvince', 'destinationProvince']);
 
         $qrCodeService = app(InvoiceQrCodeService::class);
@@ -149,6 +161,7 @@ class InvoiceController extends Controller
     public function downloadPdf(Invoice $invoice)
     {
         $this->authorizeCurrentEnvironment($invoice);
+        $this->tenantContext->authorizeModel($invoice);
         $invoice->load(['items', 'customer', 'saleOriginProvince', 'destinationProvince']);
 
         $qrCodeService = app(InvoiceQrCodeService::class);
@@ -230,9 +243,10 @@ class InvoiceController extends Controller
             ->orderBy('name')
             ->get();
 
-        $defaultCustomerId = Customer::query()->orderBy('name')->value('id');
+        $clientId = $this->tenantContext->clientId(auth()->user());
+        $defaultCustomerId = Customer::query()->forClient($clientId)->orderBy('name')->value('id');
         $selectedCustomerId = old('customer_id', $invoice->customer_id ?: $defaultCustomerId);
-        $selectedCustomer = $selectedCustomerId ? Customer::find($selectedCustomerId) : null;
+        $selectedCustomer = $selectedCustomerId ? Customer::query()->forClient($clientId)->find($selectedCustomerId) : null;
         $selectedScenarioId = old('scenario_id', $invoice->scenario_id);
         $selectedOriginProvinceId = old('sale_origin_province_id', $invoice->sale_origin_province_id ?: $selectedCustomer?->province_id);
         $selectedDestinationProvinceId = old('destination_province_id', $invoice->destination_province_id ?: $selectedCustomer?->province_id);
@@ -355,6 +369,7 @@ class InvoiceController extends Controller
         $datePart = Str::of($invoiceDate)->replace('-', '')->value();
 
         $latestNumber = Invoice::query()
+            ->forClient($this->tenantContext->clientId(auth()->user()))
             ->where('environment', $this->environmentContext->current())
             ->whereDate('invoice_date', $invoiceDate)
             ->where('invoice_number', 'like', 'INV-'.$datePart.'-%')

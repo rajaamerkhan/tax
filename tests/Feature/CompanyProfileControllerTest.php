@@ -18,6 +18,8 @@ class CompanyProfileControllerTest extends TestCase
     public function fbr_token_column_can_store_encrypted_tokens(): void
     {
         $this->assertSame('text', Schema::getColumnType('company_profiles', 'fbr_token'));
+        $this->assertSame('text', Schema::getColumnType('company_profiles', 'fbr_sandbox_token'));
+        $this->assertSame('text', Schema::getColumnType('company_profiles', 'fbr_production_token'));
     }
 
     #[Test]
@@ -33,13 +35,13 @@ class CompanyProfileControllerTest extends TestCase
             'address' => 'Lahore, Pakistan',
             'phone' => '+92-300-0000000',
             'email' => 'info@example.com',
-            'fbr_token' => $token,
+            'fbr_sandbox_token' => $token,
             'fbr_environment' => 'sandbox',
             'fbr_business_nature' => 'distributor',
         ]);
 
         $response->assertRedirect();
-        $this->assertSame($token, CompanyProfile::first()->fbr_token);
+        $this->assertSame($token, CompanyProfile::first()->fbr_sandbox_token);
         $this->assertSame('distributor', CompanyProfile::first()->fbr_business_nature);
     }
 
@@ -52,7 +54,8 @@ class CompanyProfileControllerTest extends TestCase
         CompanyProfile::create([
             'name' => 'Old Seller',
             'ntn_cnic' => '1234567-8',
-            'fbr_token' => $existingToken,
+            'fbr_sandbox_token' => $existingToken,
+            'fbr_production_token' => 'production-secret-token',
             'fbr_environment' => 'sandbox',
         ]);
 
@@ -64,7 +67,8 @@ class CompanyProfileControllerTest extends TestCase
             'address' => null,
             'phone' => null,
             'email' => null,
-            'fbr_token' => '',
+            'fbr_sandbox_token' => '',
+            'fbr_production_token' => '',
             'fbr_environment' => 'production',
             'fbr_business_nature' => 'distributor',
         ]);
@@ -73,7 +77,8 @@ class CompanyProfileControllerTest extends TestCase
 
         $company = CompanyProfile::first();
         $this->assertSame('Updated Seller', $company->name);
-        $this->assertSame($existingToken, $company->fbr_token);
+        $this->assertSame($existingToken, $company->fbr_sandbox_token);
+        $this->assertSame('production-secret-token', $company->fbr_production_token);
         $this->assertSame('production', $company->fbr_environment->value);
         $this->assertSame('distributor', $company->fbr_business_nature);
     }

@@ -31,11 +31,18 @@ class AuthenticatedSessionController extends Controller
             return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
         }
 
+        if (! $request->user()->isOwner() && $request->user()->client?->status !== 'active') {
+            Auth::logout();
+            RateLimiter::hit($key, 60);
+
+            return back()->withErrors(['email' => 'This client account is inactive.'])->onlyInput('email');
+        }
+
         RateLimiter::clear($key);
         $request->session()->regenerate();
         $request->user()->forceFill(['last_login_at' => now()])->save();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended($request->user()->isOwner() ? route('owner.clients.index') : route('dashboard'));
     }
 
     public function destroy(Request $request): RedirectResponse

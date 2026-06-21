@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Models\Client;
 use App\Models\CompanyProfile;
 use App\Models\Province;
 use App\Models\Uom;
@@ -27,9 +28,15 @@ class DatabaseSeeder extends Seeder
         $this->call(TaxRateSeeder::class);
         $this->call(ScenarioSeeder::class);
 
+        $defaultClient = Client::firstOrCreate(
+            ['name' => 'Default Client'],
+            ['email' => 'client@example.com', 'status' => 'active'],
+        );
+
         CompanyProfile::firstOrCreate(
-            ['name' => 'Demo Seller'],
+            ['client_id' => $defaultClient->id],
             [
+                'name' => 'Demo Seller',
                 'ntn_cnic' => '1234567-8',
                 'strn' => '1234567890123',
                 'province_id' => $punjab->id,
@@ -41,18 +48,23 @@ class DatabaseSeeder extends Seeder
         );
 
         User::updateOrCreate(
+            ['email' => 'owner@fbr.local'],
+            ['client_id' => null, 'name' => 'Application Owner', 'phone' => '+92-300-0000001', 'role' => UserRole::Owner, 'password' => 'password'],
+        );
+
+        User::updateOrCreate(
             ['email' => 'admin@fbr.local'],
-            ['name' => 'System Admin', 'phone' => '+92-300-1111111', 'role' => UserRole::Admin, 'password' => 'password'],
+            ['client_id' => $defaultClient->id, 'name' => 'System Admin', 'phone' => '+92-300-1111111', 'role' => UserRole::Admin, 'password' => 'password'],
         );
 
         User::updateOrCreate(
             ['email' => 'accountant@fbr.local'],
-            ['name' => 'Lead Accountant', 'phone' => '+92-300-2222222', 'role' => UserRole::Accountant, 'password' => 'password'],
+            ['client_id' => $defaultClient->id, 'name' => 'Lead Accountant', 'phone' => '+92-300-2222222', 'role' => UserRole::Accountant, 'password' => 'password'],
         );
 
         User::updateOrCreate(
             ['email' => 'viewer@fbr.local'],
-            ['name' => 'Reporting Viewer', 'phone' => '+92-300-3333333', 'role' => UserRole::Viewer, 'password' => 'password'],
+            ['client_id' => $defaultClient->id, 'name' => 'Reporting Viewer', 'phone' => '+92-300-3333333', 'role' => UserRole::Viewer, 'password' => 'password'],
         );
 
         $this->call(HsCodeTariffSeeder::class);

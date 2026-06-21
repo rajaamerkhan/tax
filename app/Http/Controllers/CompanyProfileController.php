@@ -7,16 +7,19 @@ use App\Jobs\SyncFbrReferenceDataJob;
 use App\Models\CompanyProfile;
 use App\Models\Province;
 use App\Support\FbrSandboxProfile;
+use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class CompanyProfileController extends Controller
 {
+    public function __construct(private readonly TenantContext $tenantContext) {}
+
     public function edit(): View
     {
         return view('company.edit', [
-            'company' => CompanyProfile::firstOrNew(),
+            'company' => CompanyProfile::firstOrNew(['client_id' => $this->tenantContext->clientId(auth()->user())]),
             'provinces' => $this->provinceOptions(),
             'businessNatures' => FbrSandboxProfile::businessNatures(),
         ]);
@@ -26,11 +29,16 @@ class CompanyProfileController extends Controller
     {
         $data = $request->validated();
 
-        if (! $request->filled('fbr_token')) {
-            unset($data['fbr_token']);
+        foreach (['fbr_token', 'fbr_sandbox_token', 'fbr_production_token'] as $tokenField) {
+            if (! $request->filled($tokenField)) {
+                unset($data[$tokenField]);
+            }
         }
 
-        CompanyProfile::query()->updateOrCreate(['id' => CompanyProfile::query()->value('id')], $data);
+        CompanyProfile::query()->updateOrCreate(
+            ['client_id' => $this->tenantContext->clientId($request->user())],
+            array_merge($data, ['client_id' => $this->tenantContext->clientId($request->user())]),
+        );
 
         return back()->with('status', 'Company profile updated successfully.');
     }

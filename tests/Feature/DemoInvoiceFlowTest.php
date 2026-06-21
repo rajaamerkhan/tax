@@ -125,6 +125,40 @@ class DemoInvoiceFlowTest extends TestCase
     }
 
     #[Test]
+    public function demo_invoice_submission_handles_fbr_authentication_failures(): void
+    {
+        $this->seed();
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        CompanyProfile::query()->first()->update(['fbr_business_nature' => 'distributor']);
+        config()->set('fbr.sandbox_base_url', 'https://sandbox.example.test');
+        config()->set('fbr.endpoints.validate_invoice', '/validate');
+
+        Http::fake([
+            'https://sandbox.example.test/validate' => Http::response([
+                'fault' => [
+                    'message' => 'Invalid Credentials',
+                ],
+            ], 401),
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.mock-fbr-console.demo-invoice'), [
+            'scenario_code' => 'SN002',
+        ]);
+
+        $response->assertRedirect(route('admin.mock-fbr-console'));
+        $response->assertSessionHas('error');
+
+        $invoice = Invoice::query()->firstOrFail();
+        $this->assertSame(InvoiceStatus::Failed, $invoice->status);
+        $this->assertStringContainsString('FBR returned HTTP 401', $invoice->error_message);
+        $this->assertDatabaseHas('fbr_api_logs', [
+            'invoice_id' => $invoice->id,
+            'http_status' => 401,
+            'status' => 'failed',
+        ]);
+    }
+
+    #[Test]
     public function selected_demo_scenario_controls_the_generated_payload(): void
     {
         $this->seed();

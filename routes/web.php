@@ -12,6 +12,7 @@ use App\Http\Controllers\InvoiceVerificationController;
 use App\Http\Controllers\InvoiceAutocompleteController;
 use App\Http\Controllers\InvoiceImportController;
 use App\Http\Controllers\InvoiceReferenceController;
+use App\Http\Controllers\Owner\ClientController as OwnerClientController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,12 +29,19 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::redirect('/owner', '/owner/clients');
     Route::redirect('/invoice', '/invoices');
     Route::redirect('/invoice/create', '/invoices/create');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
+    Route::middleware('role:owner')->prefix('owner')->name('owner.')->group(function (): void {
+        Route::post('/clients/{client}/manage', [OwnerClientController::class, 'manage'])->name('clients.manage');
+        Route::delete('/managed-client', [OwnerClientController::class, 'stopManaging'])->name('clients.stop-managing');
+        Route::resource('clients', OwnerClientController::class)->except(['show', 'destroy']);
+    });
 
     Route::middleware('role:admin')->group(function (): void {
         Route::get('/company', [CompanyProfileController::class, 'edit'])->name('company.edit');

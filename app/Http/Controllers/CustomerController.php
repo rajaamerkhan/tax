@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
 use App\Models\Province;
+use App\Support\TenantContext;
 use Illuminate\Support\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,9 +13,12 @@ use Illuminate\View\View;
 
 class CustomerController extends Controller
 {
+    public function __construct(private readonly TenantContext $tenantContext) {}
+
     public function index(Request $request): View
     {
         $customers = Customer::query()
+            ->forClient($this->tenantContext->clientId($request->user()))
             ->with('province')
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $query->where(function ($inner) use ($request): void {
@@ -37,23 +41,30 @@ class CustomerController extends Controller
 
     public function store(CustomerRequest $request): RedirectResponse
     {
-        $customer = Customer::create($request->validated());
+        $customer = Customer::create(array_merge($request->validated(), [
+            'client_id' => $this->tenantContext->clientId($request->user()),
+        ]));
 
         return redirect()->route('customers.show', $customer)->with('status', 'Customer created successfully.');
     }
 
     public function show(Customer $customer): View
     {
+        $this->tenantContext->authorizeModel($customer);
+
         return view('customers.show', compact('customer'));
     }
 
     public function edit(Customer $customer): View
     {
+        $this->tenantContext->authorizeModel($customer);
+
         return view('customers.edit', ['customer' => $customer, 'provinces' => $this->provinceOptions()]);
     }
 
     public function update(CustomerRequest $request, Customer $customer): RedirectResponse
     {
+        $this->tenantContext->authorizeModel($customer);
         $customer->update($request->validated());
 
         return redirect()->route('customers.show', $customer)->with('status', 'Customer updated successfully.');
@@ -61,6 +72,7 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer): RedirectResponse
     {
+        $this->tenantContext->authorizeModel($customer);
         $customer->update(['status' => 'inactive']);
         $customer->delete();
 

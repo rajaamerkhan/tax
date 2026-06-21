@@ -7,21 +7,33 @@ use App\Models\FbrApiLog;
 use App\Models\Invoice;
 use App\Support\FbrEnvironmentContext;
 use App\Support\InvoicePayloadBuilder;
+use App\Support\TenantContext;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
 class FbrDigitalInvoiceService
 {
-    public function __construct(private readonly InvoicePayloadBuilder $payloadBuilder, private readonly FbrEnvironmentContext $environmentContext) {}
+    private ?int $activeClientId = null;
+
+    public function __construct(
+        private readonly InvoicePayloadBuilder $payloadBuilder,
+        private readonly FbrEnvironmentContext $environmentContext,
+        private readonly TenantContext $tenantContext,
+    ) {}
 
     public function validateInvoice(Invoice $invoice): array
     {
+        $this->activeClientId = $this->tenantContext->invoiceClientId($invoice);
+
         return $this->sendInvoiceRequest($invoice, $this->invoiceEndpoint('validate_invoice'));
     }
 
     public function submitInvoice(Invoice $invoice): array
     {
+        $this->activeClientId = $this->tenantContext->invoiceClientId($invoice);
+
         return $this->sendInvoiceRequest($invoice, $this->invoiceEndpoint('submit_invoice'));
     }
 
@@ -47,7 +59,7 @@ class FbrDigitalInvoiceService
 
     private function request(): PendingRequest
     {
-        $companyProfile = $this->companyProfile();
+        $companyProfile = $this->companyProfile($this->activeClientId);
         $baseUrl = $this->currentEnvironment($companyProfile) === 'production' ? config('fbr.production_base_url') : config('fbr.sandbox_base_url');
         $token = $this->securityToken($companyProfile);
 
@@ -60,19 +72,21 @@ class FbrDigitalInvoiceService
         return filled($token) ? $request->withToken($token) : $request;
     }
 
-    private function companyProfile(): ?CompanyProfile
+    private function companyProfile(?int $clientId = null): ?CompanyProfile
     {
-        return CompanyProfile::query()->first();
+        return CompanyProfile::query()
+            ->where('client_id', $clientId ?? $this->tenantContext->clientId())
+            ->first();
     }
 
     private function currentEnvironment(?CompanyProfile $companyProfile = null): string
     {
-        return $companyProfile?->fbr_environment?->value ?? $this->environmentContext->current();
+        return $companyProfile?->fbr_environment?->value ?? $this->environmentContext->current($this->activeClientId);
     }
 
     private function invoiceEndpoint(string $key): string
     {
-        if ($this->currentEnvironment($this->companyProfile()) === 'production') {
+        if ($this->currentEnvironment($this->companyProfile($this->activeClientId)) === 'production') {
             return (string) config("fbr.endpoints.{$key}_production", config("fbr.endpoints.{$key}"));
         }
 
@@ -81,13 +95,16 @@ class FbrDigitalInvoiceService
 
     private function securityToken(?CompanyProfile $companyProfile): ?string
     {
-        $token = $this->usableToken($companyProfile?->fbr_token);
-
-        if ($token !== null) {
-            return $token;
+        if (! $companyProfile) {
+            return null;
         }
 
-        return $this->usableToken(config('fbr.security_token', ''));
+        $environment = $this->currentEnvironment($companyProfile);
+        $token = $environment === 'production'
+            ? $companyProfile->fbr_production_token
+            : $companyProfile->fbr_sandbox_token;
+
+        return $this->usableToken($token) ?? $this->usableToken($companyProfile->fbr_token);
     }
 
     private function usableToken(mixed $token): ?string
@@ -99,13 +116,15 @@ class FbrDigitalInvoiceService
 
     private function sendInvoiceRequest(Invoice $invoice, string $endpoint): array
     {
+        $this->activeClientId ??= $this->tenantContext->invoiceClientId($invoice);
         $payload = $this->payloadBuilder->build($invoice);
         $log = FbrApiLog::create([
+            'client_id' => $this->activeClientId,
             'invoice_id' => $invoice->id,
             'user_id' => auth()->id(),
             'endpoint' => $endpoint,
             'method' => 'POST',
-            'environment' => $this->currentEnvironment($this->companyProfile()),
+            'environment' => $this->currentEnvironment($this->companyProfile($this->activeClientId)),
             'status' => 'pending',
             'request_payload' => $payload,
         ]);
@@ -123,7 +142,7 @@ class FbrDigitalInvoiceService
 
             return $json;
         } catch (Throwable $exception) {
-            $response = method_exists($exception, 'response') ? $exception->response : null;
+            $response = $exception instanceof RequestException ? $exception->response : null;
 
             $log->update([
                 'http_status' => $response?->status(),
