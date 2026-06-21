@@ -134,6 +134,23 @@ class SaasAccessControlTest extends TestCase
     }
 
     #[Test]
+    public function owner_login_ignores_dashboard_intended_url_until_a_client_is_selected(): void
+    {
+        $owner = User::factory()->create([
+            'client_id' => null,
+            'email' => 'owner@example.test',
+            'role' => UserRole::Owner,
+        ]);
+
+        $this->get(route('dashboard'))->assertRedirect(route('login'));
+
+        $this->post(route('login.store'), [
+            'email' => $owner->email,
+            'password' => 'password',
+        ])->assertRedirect(route('owner.clients.index'));
+    }
+
+    #[Test]
     public function owner_manage_mode_scopes_client_workflows_to_selected_client(): void
     {
         $owner = User::factory()->create([

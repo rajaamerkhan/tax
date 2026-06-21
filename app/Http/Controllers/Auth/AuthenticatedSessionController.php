@@ -42,7 +42,11 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         $request->user()->forceFill(['last_login_at' => now()])->save();
 
-        return redirect()->intended($request->user()->isOwner() ? route('owner.clients.index') : route('dashboard'));
+        if ($request->user()->isOwner()) {
+            return redirect()->route('owner.clients.index');
+        }
+
+        return redirect()->intended(route('dashboard'));
     }
 
     public function destroy(Request $request): RedirectResponse
