@@ -18,11 +18,11 @@
         @csrf
         <div class="col-12">
             <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" value="{{ old('email') }}" required autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-no-autofill data-lpignore="true" data-1p-ignore>
+            <input type="email" name="email" class="form-control" value="{{ old('email') }}" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
         <div class="col-12">
             <label class="form-label">Password</label>
-            <input type="password" name="password" class="form-control" required autocomplete="new-password" data-no-autofill data-lpignore="true" data-1p-ignore>
+            <input type="password" name="password" class="form-control" required autocomplete="current-password">
         </div>
         <div class="col-12 d-grid">
             <button class="btn btn-primary">Sign In</button>
