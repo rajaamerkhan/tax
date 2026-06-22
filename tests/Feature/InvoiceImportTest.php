@@ -40,7 +40,7 @@ class InvoiceImportTest extends TestCase
         $this->assertSame([], $batch->errors);
         $this->assertSame('797', $batch->preview_rows[0]['invoice_number']);
         $this->assertSame('2026-05-01', $batch->preview_rows[0]['invoice_date']);
-        $this->assertSame(26.809, round((float) $batch->preview_rows[0]['unit_price'], 6));
+        $this->assertSame(22.247683, round((float) $batch->preview_rows[0]['unit_price'], 6));
 
         $this->actingAs($admin)
             ->post(route('imports.store', $batch))
@@ -65,7 +65,8 @@ class InvoiceImportTest extends TestCase
         $this->assertSame(912155.0, (float) $item->value_excluding_sales_tax);
         $this->assertSame(187014.0, (float) $item->sales_tax);
         $this->assertSame(1038966.67, round((float) $item->fixed_notified_value, 2));
-        $this->assertSame(1099169.0, (float) $invoice->grand_total);
+        $this->assertSame(1225980.67, (float) $item->total_value);
+        $this->assertSame(1225980.67, (float) $invoice->grand_total);
     }
 
     #[Test]
@@ -92,6 +93,37 @@ class InvoiceImportTest extends TestCase
         $this->assertSame('Scenario', $sheet->getCell('J1')->getValue());
         $this->assertSame('Sales Tax/ FED in ST Mode', $sheet->getCell('T1')->getValue());
         $this->assertSame('FBR INTERNAL', $sheet->getCell('C2')->getValue());
+    }
+
+    #[Test]
+    public function preview_reports_duplicate_invoice_numbers_before_importing(): void
+    {
+        $this->seed();
+        $admin = User::factory()->create([
+            'client_id' => 1,
+            'role' => UserRole::Admin,
+        ]);
+
+        Invoice::create([
+            'client_id' => $admin->client_id,
+            'invoice_number' => '797',
+            'invoice_date' => '2026-05-01',
+            'invoice_type' => 'Sale Invoice',
+            'environment' => 'sandbox',
+            'buyer_name' => 'FBR INTERNAL',
+            'status' => 'draft',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('imports.preview'), ['file' => $this->salesFormatWorkbook()])
+            ->assertRedirect();
+
+        $batch = InvoiceImportBatch::query()->latest()->firstOrFail();
+
+        $this->assertSame('has_errors', $batch->status);
+        $this->assertSame(['Invoice number 797 already exists in sandbox.'], $batch->errors[2]);
     }
 
     private function salesFormatWorkbook(): UploadedFile

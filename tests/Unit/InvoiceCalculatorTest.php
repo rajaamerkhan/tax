@@ -23,30 +23,31 @@ class InvoiceCalculatorTest extends TestCase
             'fed_payable' => 5,
         ]);
 
-        $this->assertSame(84.75, $item['value_excluding_sales_tax']);
-        $this->assertSame(15.25, $item['sales_tax']);
-        $this->assertSame(115.0, $item['total_value']);
+        $this->assertSame(82.0, $item['value_excluding_sales_tax']);
+        $this->assertSame(18.0, $item['sales_tax']);
+        $this->assertSame(133.0, $item['total_value']);
     }
 
     #[Test]
-    public function fixed_notified_value_overrides_tax_basis_without_changing_total_value(): void
+    public function fixed_notified_value_is_only_used_as_third_schedule_line_basis(): void
     {
         $calculator = app(InvoiceCalculator::class);
 
         $item = $calculator->calculateItem([
-            'quantity' => 1,
-            'unit_price' => 100,
-            'fixed_notified_value' => 200,
+            'quantity' => 41000,
+            'unit_price' => 22.247683,
+            'fixed_notified_value' => 1038966.67,
             'rate_percent' => 18,
             'discount' => 0,
             'extra_tax' => 0,
             'further_tax' => 0,
             'fed_payable' => 0,
+            'sale_type' => '3rd Schedule Goods',
         ]);
 
-        $this->assertSame(69.49, $item['value_excluding_sales_tax']);
-        $this->assertSame(30.51, $item['sales_tax']);
-        $this->assertSame(100.0, $item['total_value']);
+        $this->assertSame(912155.0, $item['value_excluding_sales_tax']);
+        $this->assertSame(187014.0, $item['sales_tax']);
+        $this->assertSame(1225980.67, $item['total_value']);
     }
 
     #[Test]
@@ -74,10 +75,10 @@ class InvoiceCalculatorTest extends TestCase
             'fed_payable' => 20,
         ]);
 
-        $this->assertSame(15.25, $original['sales_tax']);
-        $this->assertSame(30.51, $duplicateEdited['sales_tax']);
-        $this->assertSame(160.0, $original['total_value']);
-        $this->assertSame(260.0, $duplicateEdited['total_value']);
+        $this->assertSame(18.0, $original['sales_tax']);
+        $this->assertSame(36.0, $duplicateEdited['sales_tax']);
+        $this->assertSame(178.0, $original['total_value']);
+        $this->assertSame(296.0, $duplicateEdited['total_value']);
     }
 
     #[Test]

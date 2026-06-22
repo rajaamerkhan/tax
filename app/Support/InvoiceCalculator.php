@@ -14,21 +14,27 @@ class InvoiceCalculator
         $fixedNotifiedValue = $fixedNotifiedValueInput !== null && $fixedNotifiedValueInput !== ''
             ? (float) $fixedNotifiedValueInput
             : null;
+        $saleType = strtolower((string) ($item['sale_type'] ?? ''));
+        $isThirdSchedule = str_contains($saleType, '3rd schedule');
 
         $grossValue = max($quantity * $unitPrice, 0);
         $discount = min($discount, $grossValue);
 
-        $taxBasisUnitPrice = $fixedNotifiedValue !== null && $fixedNotifiedValue > 0 ? $fixedNotifiedValue : $unitPrice;
-        $taxBasisGrossValue = max($quantity * $taxBasisUnitPrice, 0);
+        $taxBasisGrossValue = $isThirdSchedule && $fixedNotifiedValue !== null && $fixedNotifiedValue > 0
+            ? $fixedNotifiedValue
+            : $grossValue;
 
-        $salesTax = $ratePercent > 0
-            ? $taxBasisGrossValue - ($taxBasisGrossValue / (1 + ($ratePercent / 100)))
-            : 0.0;
-        $valueExcludingSalesTax = max($grossValue - $salesTax, 0);
+        $salesTax = round($taxBasisGrossValue * ($ratePercent / 100), 2);
+        $valueExcludingSalesTax = $isThirdSchedule && $fixedNotifiedValue !== null && $fixedNotifiedValue > 0
+            ? $grossValue
+            : max($grossValue - $salesTax, 0);
         $extraTax = (float) ($item['extra_tax'] ?? 0);
         $furtherTax = (float) ($item['further_tax'] ?? 0);
         $fedPayable = (float) ($item['fed_payable'] ?? 0);
-        $totalValue = max($grossValue + $extraTax + $furtherTax + $fedPayable - $discount, 0);
+        $totalBasis = $isThirdSchedule && $fixedNotifiedValue !== null && $fixedNotifiedValue > 0
+            ? $fixedNotifiedValue
+            : $grossValue;
+        $totalValue = max($totalBasis + $salesTax + $extraTax + $furtherTax + $fedPayable - $discount, 0);
 
         return [
             'value_excluding_sales_tax' => round($valueExcludingSalesTax, 2),

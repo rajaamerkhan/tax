@@ -201,6 +201,8 @@
                 const furtherTax = parseFloat(row.querySelector('input[name$="[further_tax]"]')?.value || 0);
                 const fedPayable = parseFloat(row.querySelector('input[name$="[fed_payable]"]')?.value || 0);
                 const fixedNotifiedValue = parseFloat(row.querySelector('input[name$="[fixed_notified_value]"]')?.value || 0);
+                const saleType = String(row.querySelector('input[name$="[sale_type]"]')?.value || '').toLowerCase();
+                const isThirdSchedule = saleType.includes('3rd schedule');
                 const grossValue = Math.max(qty * price, 0);
                 if (discount > grossValue) {
                     discount = grossValue;
@@ -208,11 +210,13 @@
                         discountField.value = grossValue.toFixed(2);
                     }
                 }
-                const taxBasisUnitPrice = fixedNotifiedValue > 0 ? fixedNotifiedValue : price;
-                const taxBasisGrossValue = Math.max(qty * taxBasisUnitPrice, 0);
-                const tax = rate > 0 ? taxBasisGrossValue - (taxBasisGrossValue / (1 + (rate / 100))) : 0;
-                const valueExcludingTax = Math.max(grossValue - tax, 0);
-                const total = Math.max(grossValue + extraTax + furtherTax + fedPayable - discount, 0);
+                const taxBasisGrossValue = isThirdSchedule && fixedNotifiedValue > 0 ? fixedNotifiedValue : grossValue;
+                const tax = rate > 0 ? taxBasisGrossValue * (rate / 100) : 0;
+                const valueExcludingTax = isThirdSchedule && fixedNotifiedValue > 0
+                    ? grossValue
+                    : Math.max(grossValue - tax, 0);
+                const totalBasis = isThirdSchedule && fixedNotifiedValue > 0 ? fixedNotifiedValue : grossValue;
+                const total = Math.max(totalBasis + tax + extraTax + furtherTax + fedPayable - discount, 0);
                 const totalField = row.querySelector('.line-total');
                 const baseField = row.querySelector('.value-excl-tax');
                 const taxField = row.querySelector('.sales-tax-field');

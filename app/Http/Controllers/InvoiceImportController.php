@@ -45,6 +45,15 @@ class InvoiceImportController extends Controller
 
         $rows = $import->rows ?? collect();
         $errors = [];
+        $clientId = $this->tenantContext->clientId($request->user());
+        $environment = $this->environmentContext->current($clientId);
+        $existingInvoiceNumbers = Invoice::query()
+            ->where('client_id', $clientId)
+            ->where('environment', $environment)
+            ->whereIn('invoice_number', $rows->pluck('invoice_number')->filter()->unique()->values())
+            ->pluck('invoice_number')
+            ->all();
+        $seenInvoiceNumbers = [];
 
         foreach ($rows as $index => $row) {
             $validator = Validator::make($row, [
@@ -60,10 +69,25 @@ class InvoiceImportController extends Controller
             if ($validator->fails()) {
                 $errors[$index + 2] = $validator->errors()->all();
             }
+
+            if ($row['invoice_number'] && in_array($row['invoice_number'], $existingInvoiceNumbers, true)) {
+                $errors[$index + 2][] = "Invoice number {$row['invoice_number']} already exists in {$environment}.";
+            }
+
+            if ($row['invoice_number']) {
+                $seenInvoiceNumbers[$row['invoice_number']] ??= 0;
+                $seenInvoiceNumbers[$row['invoice_number']]++;
+            }
+        }
+
+        foreach ($rows as $index => $row) {
+            if ($row['invoice_number'] && ($seenInvoiceNumbers[$row['invoice_number']] ?? 0) > 1) {
+                $errors[$index + 2][] = "Invoice number {$row['invoice_number']} appears multiple times in this file.";
+            }
         }
 
         $batch = InvoiceImportBatch::create([
-            'client_id' => $this->tenantContext->clientId($request->user()),
+            'client_id' => $clientId,
             'filename' => $request->file('file')->getClientOriginalName(),
             'preview_rows' => $rows->take(200)->values()->all(),
             'errors' => $errors,
@@ -91,6 +115,14 @@ class InvoiceImportController extends Controller
 
         foreach ($grouped as $invoiceNumber => $rows) {
             $first = $rows->first();
+            if (Invoice::query()
+                ->where('client_id', $import->client_id)
+                ->where('environment', $this->environmentContext->current($import->client_id))
+                ->where('invoice_number', $invoiceNumber)
+                ->exists()) {
+                continue;
+            }
+
             $customer = $this->resolveCustomer($first, $import->client_id);
             $companyProfile = CompanyProfile::query()->where('client_id', $import->client_id)->first();
             $invoice = Invoice::create([

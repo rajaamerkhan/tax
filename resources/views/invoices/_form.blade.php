@@ -1,4 +1,12 @@
-@php($oldItems = old('items', $invoice->items->count() ? $invoice->items->map(fn($item) => [
+@php($oldItems = old('items', $invoice->items->count() ? $invoice->items->map(function($item) {
+    $isThirdSchedule = str_contains(strtolower((string) $item->sale_type), '3rd schedule');
+    $unitPrice = $item->unit_price;
+
+    if ($isThirdSchedule && (float) $item->quantity > 0 && (float) $item->value_excluding_sales_tax > 0) {
+        $unitPrice = round((float) $item->value_excluding_sales_tax / (float) $item->quantity, 6);
+    }
+
+    return [
     'description' => $item->description,
     'hs_code_id' => $item->hs_code_id,
     'uom' => $item->uom ?: $item->uomRelation?->name ?: $item->uomRelation?->code,
@@ -6,7 +14,7 @@
     'sale_type_id' => $item->sale_type_id,
     'sro_schedule_id' => $item->sro_schedule_id,
     'quantity' => $item->quantity,
-    'unit_price' => $item->unit_price,
+    'unit_price' => $unitPrice,
     'rate_percent' => $item->rate_percent,
     'discount' => $item->discount,
     'extra_tax' => $item->extra_tax,
@@ -18,7 +26,7 @@
     'hs_code' => $item->hs_code,
     'sale_type' => $item->sale_type,
     'sro_schedule_number' => $item->sro_schedule_number,
-])->toArray() : [[
+]; })->toArray() : [[
     'description' => '',
     'quantity' => 1,
     'unit_price' => 0,

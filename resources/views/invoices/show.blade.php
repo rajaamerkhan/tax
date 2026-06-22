@@ -139,6 +139,7 @@
                                 <th>Sale Type</th>
                                 <th>Qty / UOM</th>
                                 <th>Rate</th>
+                                <th>Fixed/Notified Value</th>
                                 <th>Value Excl. ST</th>
                                 <th>Sales Tax</th>
                                 <th>Adjustments</th>
@@ -166,10 +167,8 @@
                                     <td>{{ rtrim(rtrim(number_format((float) $item->quantity, 4, '.', ''), '0'), '.') ?: '0' }} {{ $item->uom ?: '' }}</td>
                                     <td>
                                         <div>{{ $item->rate_percent !== null ? rtrim(rtrim(number_format((float) $item->rate_percent, 2, '.', ''), '0'), '.').'%' : 'N/A' }}</div>
-                                        @if((float) $item->fixed_notified_value > 0)
-                                            <div class="invoice-item-secondary">Fixed value: PKR {{ number_format($item->fixed_notified_value, 2) }}</div>
-                                        @endif
                                     </td>
+                                    <td>PKR {{ number_format((float) $item->fixed_notified_value, 2) }}</td>
                                     <td>PKR {{ number_format($item->value_excluding_sales_tax, 2) }}</td>
                                     <td>PKR {{ number_format($item->sales_tax, 2) }}</td>
                                     <td>

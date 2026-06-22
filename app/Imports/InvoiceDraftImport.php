@@ -34,26 +34,23 @@ class InvoiceDraftImport implements ToCollection, WithHeadingRow
             'sales_tax_applicable',
             'sales_tax',
         ]));
+        $fixedNotifiedValue = $this->number($this->value($row, [
+            'fixed_notified_value_or_retail_price',
+            'fixed_notified_value',
+            'retail_price',
+        ]));
         $extraTax = $this->number($this->value($row, ['extra_tax']));
         $furtherTax = $this->number($this->value($row, ['further_tax']));
         $fedPayable = $this->number($this->value($row, ['fed_payable', 'fed_in_st_mode']));
         $discount = $this->number($this->value($row, ['discount']));
         $totalValue = $this->number($this->value($row, ['total_value_of_sales', 'total_value', 'total_values']));
+        $saleType = $this->text($this->value($row, ['sale_type']));
 
         if (($unitPrice === null || $unitPrice == 0.0) && $quantity > 0) {
-            $derivedTotal = $totalValue;
+            $derivedUnitValue = $valueExcludingSalesTax ?? $totalValue;
 
-            if ($derivedTotal === null && $valueExcludingSalesTax !== null) {
-                $derivedTotal = $valueExcludingSalesTax
-                    + (float) $salesTax
-                    + (float) $extraTax
-                    + (float) $furtherTax
-                    + (float) $fedPayable
-                    - (float) $discount;
-            }
-
-            if ($derivedTotal !== null) {
-                $unitPrice = round($derivedTotal / $quantity, 6);
+            if ($derivedUnitValue !== null && $derivedUnitValue > 0) {
+                $unitPrice = round($derivedUnitValue / $quantity, 6);
             }
         }
 
@@ -70,7 +67,7 @@ class InvoiceDraftImport implements ToCollection, WithHeadingRow
             'destination_province' => $this->text($this->value($row, ['destination_of_supply', 'destination_province', 'buyer_province'])),
             'invoice_type' => $this->text($this->value($row, ['invoice_type', 'document_type'])) ?: 'Sale Invoice',
             'scenario_code' => $this->text($this->value($row, ['scenario', 'scenario_code', 'scenario_id'])),
-            'sale_type' => $this->text($this->value($row, ['sale_type'])),
+            'sale_type' => $saleType,
             'item_description' => $this->text($this->value($row, ['description', 'item_description'])),
             'quantity' => $quantity ?? 0,
             'unit_price' => $unitPrice ?? 0,
@@ -78,11 +75,7 @@ class InvoiceDraftImport implements ToCollection, WithHeadingRow
             'hs_code' => $this->hsCode($this->value($row, ['hs_code', 'hs_code_'])),
             'uom' => $this->text($this->value($row, ['uom'])),
             'value_excluding_sales_tax' => $valueExcludingSalesTax,
-            'fixed_notified_value' => $this->number($this->value($row, [
-                'fixed_notified_value_or_retail_price',
-                'fixed_notified_value',
-                'retail_price',
-            ])),
+            'fixed_notified_value' => $fixedNotifiedValue,
             'sales_tax' => $salesTax,
             'extra_tax' => $extraTax,
             'further_tax' => $furtherTax,
@@ -90,7 +83,16 @@ class InvoiceDraftImport implements ToCollection, WithHeadingRow
             'discount' => $discount,
             'sro_schedule_number' => $this->text($this->value($row, ['sro_no_schedule_no', 'sro_schedule_no', 'sro_no'])),
             'item_serial_number' => $this->text($this->value($row, ['item_sr_no', 'sro_item_serial_no'])),
-            'total_value' => $totalValue,
+            'total_value' => $totalValue ?? $this->derivedTotalValue(
+                $saleType,
+                $valueExcludingSalesTax,
+                $fixedNotifiedValue,
+                $salesTax,
+                $extraTax,
+                $furtherTax,
+                $fedPayable,
+                $discount,
+            ),
             'has_explicit_values' => $valueExcludingSalesTax !== null || $salesTax !== null || $totalValue !== null,
         ];
     }
@@ -157,5 +159,34 @@ class InvoiceDraftImport implements ToCollection, WithHeadingRow
         $value = $this->text($value);
 
         return $value ? rtrim($value, ':- ') : null;
+    }
+
+    private function derivedTotalValue(
+        ?string $saleType,
+        ?float $valueExcludingSalesTax,
+        ?float $fixedNotifiedValue,
+        ?float $salesTax,
+        ?float $extraTax,
+        ?float $furtherTax,
+        ?float $fedPayable,
+        ?float $discount,
+    ): ?float {
+        $baseValue = str_contains(strtolower((string) $saleType), '3rd schedule') && $fixedNotifiedValue !== null && $fixedNotifiedValue > 0
+            ? $fixedNotifiedValue
+            : $valueExcludingSalesTax;
+
+        if ($baseValue === null) {
+            return null;
+        }
+
+        return round(
+            $baseValue
+            + (float) $salesTax
+            + (float) $extraTax
+            + (float) $furtherTax
+            + (float) $fedPayable
+            - (float) $discount,
+            2,
+        );
     }
 }
