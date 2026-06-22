@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\UserRole;
 use App\Models\Customer;
 use App\Models\Invoice;
@@ -96,7 +97,55 @@ class InvoiceImportTest extends TestCase
     }
 
     #[Test]
-    public function preview_reports_duplicate_invoice_numbers_before_importing(): void
+    public function import_replaces_existing_draft_or_validated_invoices(): void
+    {
+        $this->seed();
+        $admin = User::factory()->create([
+            'client_id' => 1,
+            'role' => UserRole::Admin,
+        ]);
+
+        $invoice = Invoice::create([
+            'client_id' => $admin->client_id,
+            'invoice_number' => '797',
+            'invoice_date' => '2026-05-01',
+            'invoice_type' => 'Sale Invoice',
+            'environment' => 'sandbox',
+            'buyer_name' => 'FBR INTERNAL',
+            'status' => InvoiceStatus::Validated,
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+        $invoice->items()->create([
+            'description' => 'Old item',
+            'quantity' => 1,
+            'unit_price' => 1,
+            'rate_percent' => 18,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('imports.preview'), ['file' => $this->salesFormatWorkbook()])
+            ->assertRedirect();
+
+        $batch = InvoiceImportBatch::query()->latest()->firstOrFail();
+
+        $this->assertSame('previewed', $batch->status);
+        $this->assertSame([], $batch->errors);
+
+        $this->actingAs($admin)
+            ->post(route('imports.store', $batch))
+            ->assertRedirect(route('imports.show', $batch));
+
+        $invoice->refresh()->load('items');
+
+        $this->assertSame(1, Invoice::query()->where('invoice_number', '797')->count());
+        $this->assertSame(InvoiceStatus::Draft, $invoice->status);
+        $this->assertSame('CEMENT', $invoice->items->first()->description);
+        $this->assertSame(1225980.67, (float) $invoice->grand_total);
+    }
+
+    #[Test]
+    public function preview_blocks_reimport_for_submitted_family_invoices(): void
     {
         $this->seed();
         $admin = User::factory()->create([
@@ -111,7 +160,7 @@ class InvoiceImportTest extends TestCase
             'invoice_type' => 'Sale Invoice',
             'environment' => 'sandbox',
             'buyer_name' => 'FBR INTERNAL',
-            'status' => 'draft',
+            'status' => InvoiceStatus::Editable,
             'created_by' => $admin->id,
             'updated_by' => $admin->id,
         ]);
@@ -123,7 +172,7 @@ class InvoiceImportTest extends TestCase
         $batch = InvoiceImportBatch::query()->latest()->firstOrFail();
 
         $this->assertSame('has_errors', $batch->status);
-        $this->assertSame(['Invoice number 797 already exists in sandbox.'], $batch->errors[2]);
+        $this->assertSame(['Invoice number 797 already exists in sandbox with editable status and cannot be re-imported.'], $batch->errors[2]);
     }
 
     private function salesFormatWorkbook(): UploadedFile

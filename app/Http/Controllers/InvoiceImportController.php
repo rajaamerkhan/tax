@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceStatus;
 use App\Http\Requests\InvoiceImportRequest;
 use App\Imports\InvoiceDraftImport;
 use App\Models\CompanyProfile;
@@ -47,12 +48,12 @@ class InvoiceImportController extends Controller
         $errors = [];
         $clientId = $this->tenantContext->clientId($request->user());
         $environment = $this->environmentContext->current($clientId);
-        $existingInvoiceNumbers = Invoice::query()
+        $existingInvoices = Invoice::query()
             ->where('client_id', $clientId)
             ->where('environment', $environment)
             ->whereIn('invoice_number', $rows->pluck('invoice_number')->filter()->unique()->values())
-            ->pluck('invoice_number')
-            ->all();
+            ->get(['invoice_number', 'status'])
+            ->keyBy('invoice_number');
         $seenInvoiceNumbers = [];
 
         foreach ($rows as $index => $row) {
@@ -70,8 +71,12 @@ class InvoiceImportController extends Controller
                 $errors[$index + 2] = $validator->errors()->all();
             }
 
-            if ($row['invoice_number'] && in_array($row['invoice_number'], $existingInvoiceNumbers, true)) {
-                $errors[$index + 2][] = "Invoice number {$row['invoice_number']} already exists in {$environment}.";
+            if ($row['invoice_number'] && $existingInvoices->has($row['invoice_number'])) {
+                $existingStatus = $existingInvoices[$row['invoice_number']]->status;
+
+                if (! in_array($existingStatus, [InvoiceStatus::Draft, InvoiceStatus::Validated], true)) {
+                    $errors[$index + 2][] = "Invoice number {$row['invoice_number']} already exists in {$environment} with {$existingStatus->value} status and cannot be re-imported.";
+                }
             }
 
             if ($row['invoice_number']) {
@@ -115,17 +120,19 @@ class InvoiceImportController extends Controller
 
         foreach ($grouped as $invoiceNumber => $rows) {
             $first = $rows->first();
-            if (Invoice::query()
+            $invoice = Invoice::query()
                 ->where('client_id', $import->client_id)
                 ->where('environment', $this->environmentContext->current($import->client_id))
                 ->where('invoice_number', $invoiceNumber)
-                ->exists()) {
+                ->first();
+
+            if ($invoice && ! in_array($invoice->status, [InvoiceStatus::Draft, InvoiceStatus::Validated], true)) {
                 continue;
             }
 
             $customer = $this->resolveCustomer($first, $import->client_id);
             $companyProfile = CompanyProfile::query()->where('client_id', $import->client_id)->first();
-            $invoice = Invoice::create([
+            $invoiceData = [
                 'client_id' => $import->client_id,
                 'invoice_number' => $invoiceNumber ?: 'IMP-'.Str::upper(Str::random(8)),
                 'invoice_date' => Carbon::parse($first['invoice_date'])->toDateString(),
@@ -140,9 +147,19 @@ class InvoiceImportController extends Controller
                 'buyer_strn' => $first['buyer_strn'],
                 'buyer_address' => $first['buyer_address'] ?? null,
                 'status' => 'draft',
-                'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
-            ]);
+                'fbr_response_json' => null,
+                'error_message' => null,
+            ];
+
+            if ($invoice) {
+                $invoice->update($invoiceData);
+                $invoice->items()->delete();
+            } else {
+                $invoice = Invoice::create(array_merge($invoiceData, [
+                    'created_by' => auth()->id(),
+                ]));
+            }
 
             foreach ($rows as $row) {
                 $item = [
