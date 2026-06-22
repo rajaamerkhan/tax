@@ -54,7 +54,7 @@ class InvoiceImportController extends Controller
             ->where('client_id', $clientId)
             ->where('environment', $environment)
             ->whereIn('invoice_number', $rows->pluck('invoice_number')->filter()->unique()->values())
-            ->get(['invoice_number', 'status'])
+            ->get(['id', 'invoice_number', 'status', 'editable_until', 'locked_at'])
             ->keyBy('invoice_number');
         $seenInvoiceNumbers = [];
 
@@ -74,10 +74,10 @@ class InvoiceImportController extends Controller
             }
 
             if ($row['invoice_number'] && $existingInvoices->has($row['invoice_number'])) {
-                $existingStatus = $existingInvoices[$row['invoice_number']]->status;
+                $existingInvoice = $existingInvoices[$row['invoice_number']];
 
-                if (! in_array($existingStatus, [InvoiceStatus::Draft, InvoiceStatus::Validated], true)) {
-                    $errors[$index + 2][] = "Invoice number {$row['invoice_number']} already exists in {$environment} with {$existingStatus->value} status and cannot be re-imported.";
+                if (! $this->canReplaceFromImport($existingInvoice)) {
+                    $errors[$index + 2][] = "Invoice number {$row['invoice_number']} already exists in {$environment} with {$existingInvoice->status->value} status and cannot be re-imported.";
                 }
             }
 
@@ -149,7 +149,7 @@ class InvoiceImportController extends Controller
                 ->where('invoice_number', $invoiceNumber)
                 ->first();
 
-            if ($invoice && ! in_array($invoice->status, [InvoiceStatus::Draft, InvoiceStatus::Validated], true)) {
+            if ($invoice && ! $this->canReplaceFromImport($invoice)) {
                 continue;
             }
 
@@ -229,6 +229,11 @@ class InvoiceImportController extends Controller
         $import->update(['imported_count' => $count, 'status' => 'imported']);
 
         return redirect()->route('imports.show', $import)->with('status', 'Draft invoices imported successfully.');
+    }
+
+    private function canReplaceFromImport(Invoice $invoice): bool
+    {
+        return $invoice->isEditable();
     }
 
     public function sampleTemplate()
