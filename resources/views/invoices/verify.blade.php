@@ -102,6 +102,11 @@
             border-collapse: collapse;
             font-size: .95rem;
         }
+        .items-wrap {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
         thead th {
             text-align: left;
             font-size: .76rem;
@@ -120,12 +125,21 @@
         tbody tr:last-child td { border-bottom: none; }
         .item-title { font-weight: 700; }
         .item-sub { margin-top: 4px; color: var(--muted); font-size: .88rem; }
+        .mobile-label { display: none; }
         .summary-row {
             display: flex;
             justify-content: space-between;
             gap: 16px;
             padding: 10px 0;
             border-bottom: 1px solid #f0f1f6;
+        }
+        .summary-row span {
+            min-width: 0;
+        }
+        .summary-row strong {
+            min-width: 0;
+            text-align: right;
+            overflow-wrap: anywhere;
         }
         .summary-row:last-child { border-bottom: none; }
         .summary-row.total {
@@ -144,6 +158,70 @@
             }
             h1 {
                 font-size: 1.5rem;
+            }
+            .wrap {
+                padding: 20px 12px 36px;
+            }
+            .hero,
+            .card {
+                border-radius: 14px;
+            }
+            .hero,
+            .card {
+                padding: 20px;
+            }
+            .items-wrap {
+                overflow: visible;
+            }
+            table,
+            thead,
+            tbody,
+            tr,
+            th,
+            td {
+                display: block;
+            }
+            thead {
+                display: none;
+            }
+            tbody tr {
+                padding: 14px 0;
+                border-bottom: 1px solid #f0f1f6;
+            }
+            tbody tr:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+            }
+            tbody td {
+                display: flex;
+                justify-content: space-between;
+                gap: 14px;
+                padding: 7px 0;
+                border-bottom: none;
+                overflow-wrap: anywhere;
+            }
+            tbody td:first-child {
+                display: block;
+                padding-top: 0;
+            }
+            .mobile-label {
+                display: inline-block;
+                flex: 0 0 42%;
+                color: var(--muted);
+                font-size: .74rem;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: .04em;
+            }
+            tbody td:not(:first-child) {
+                text-align: right;
+                font-weight: 700;
+            }
+            .summary-row {
+                gap: 12px;
+            }
+            .summary-row.total {
+                align-items: flex-start;
             }
         }
     </style>
@@ -211,33 +289,35 @@
 
         <section class="card" style="margin-bottom: 24px;">
             <h2>Invoice Items</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Qty</th>
-                        <th>Rate %</th>
-                        <th>Value Excl. ST</th>
-                        <th>Sales Tax</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($invoice->items as $item)
+            <div class="items-wrap">
+                <table>
+                    <thead>
                         <tr>
-                            <td>
-                                <div class="item-title">{{ $item->description ?: 'Untitled item' }}</div>
-                                <div class="item-sub">{{ $item->hs_code ?: 'No HS code' }}</div>
-                            </td>
-                            <td>{{ $item->quantity }} {{ $item->uom }}</td>
-                            <td>{{ $item->rate_percent !== null ? rtrim(rtrim(number_format((float) $item->rate_percent, 2, '.', ''), '0'), '.').'%' : 'N/A' }}</td>
-                            <td>PKR {{ number_format($item->value_excluding_sales_tax, 2) }}</td>
-                            <td>PKR {{ number_format($item->sales_tax, 2) }}</td>
-                            <td>PKR {{ number_format($item->total_value, 2) }}</td>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Rate %</th>
+                            <th>Value Excl. ST</th>
+                            <th>Sales Tax</th>
+                            <th>Total</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach($invoice->items as $item)
+                            <tr>
+                                <td>
+                                    <div class="item-title">{{ $item->description ?: 'Untitled item' }}</div>
+                                    <div class="item-sub">{{ $item->hs_code ?: 'No HS code' }}</div>
+                                </td>
+                                <td><span class="mobile-label">Qty</span>{{ $item->quantity }} {{ $item->uom }}</td>
+                                <td><span class="mobile-label">Rate</span>{{ $item->rate_percent !== null ? rtrim(rtrim(number_format((float) $item->rate_percent, 2, '.', ''), '0'), '.').'%' : 'N/A' }}</td>
+                                <td><span class="mobile-label">Value Excl. ST</span>PKR {{ number_format($item->value_excluding_sales_tax, 2) }}</td>
+                                <td><span class="mobile-label">Sales Tax</span>PKR {{ number_format($item->sales_tax, 2) }}</td>
+                                <td><span class="mobile-label">Total</span>PKR {{ number_format($item->total_value, 2) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <section class="card">
