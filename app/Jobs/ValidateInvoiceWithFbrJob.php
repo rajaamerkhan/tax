@@ -9,6 +9,8 @@ use App\Support\AuditLogger;
 use App\Support\FbrEnvironmentContext;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Throwable;
 
 class ValidateInvoiceWithFbrJob implements ShouldQueue
@@ -46,8 +48,22 @@ class ValidateInvoiceWithFbrJob implements ShouldQueue
         $invoice->update([
             'status' => InvoiceStatus::Failed,
             'error_message' => $exception?->getMessage(),
+            'fbr_response_json' => $exception instanceof RequestException ? $this->responsePayload($exception->response) : null,
         ]);
 
         app(AuditLogger::class)->log('invoice.fbr_validate_failed', $invoice, null, ['error' => $exception?->getMessage()]);
+    }
+
+    private function responsePayload(?Response $response): ?array
+    {
+        if (! $response) {
+            return null;
+        }
+
+        $json = $response->json();
+
+        return is_array($json) ? $json : [
+            'raw_response' => $response->body(),
+        ];
     }
 }

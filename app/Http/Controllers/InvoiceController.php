@@ -20,9 +20,11 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Throwable;
 
 class InvoiceController extends Controller
 {
@@ -56,7 +58,9 @@ class InvoiceController extends Controller
             })
             ->when($request->filled('date_from'), fn ($query) => $query->whereDate('invoice_date', '>=', $request->date_from))
             ->when($request->filled('date_to'), fn ($query) => $query->whereDate('invoice_date', '<=', $request->date_to))
-            ->latest('invoice_date')
+            ->orderByDesc('created_at')
+            ->orderByDesc('invoice_date')
+            ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString();
 
@@ -129,18 +133,36 @@ class InvoiceController extends Controller
     {
         $this->authorizeCurrentEnvironment($invoice);
         $this->tenantContext->authorizeModel($invoice);
-        ValidateInvoiceWithFbrJob::dispatch($invoice->id);
 
-        return back()->with('status', 'FBR validation queued.');
+        $job = new ValidateInvoiceWithFbrJob($invoice->id);
+
+        try {
+            Bus::dispatchSync($job);
+
+            return back()->with('status', 'FBR validation completed.');
+        } catch (Throwable $exception) {
+            $job->failed($exception);
+
+            return back()->with('error', 'FBR validation failed: '.$exception->getMessage());
+        }
     }
 
     public function submitToFbr(Invoice $invoice): RedirectResponse
     {
         $this->authorizeCurrentEnvironment($invoice);
         $this->tenantContext->authorizeModel($invoice);
-        SubmitInvoiceToFbrJob::dispatch($invoice->id);
 
-        return back()->with('status', 'FBR submission queued.');
+        $job = new SubmitInvoiceToFbrJob($invoice->id);
+
+        try {
+            Bus::dispatchSync($job);
+
+            return back()->with('status', 'FBR submission completed.');
+        } catch (Throwable $exception) {
+            $job->failed($exception);
+
+            return back()->with('error', 'FBR submission failed: '.$exception->getMessage());
+        }
     }
 
     public function print(Invoice $invoice): View

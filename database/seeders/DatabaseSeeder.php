@@ -6,7 +6,6 @@ use App\Enums\UserRole;
 use App\Models\Client;
 use App\Models\CompanyProfile;
 use App\Models\Province;
-use App\Models\Uom;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -33,16 +32,16 @@ class DatabaseSeeder extends Seeder
             ['email' => 'client@example.com', 'status' => 'active'],
         );
 
-        CompanyProfile::firstOrCreate(
+        CompanyProfile::updateOrCreate(
             ['client_id' => $defaultClient->id],
             [
-                'name' => 'Demo Seller',
-                'ntn_cnic' => '1234567-8',
-                'strn' => '1234567890123',
+                'name' => 'MUHAMMAD NAWAZ',
+                'ntn_cnic' => '3530176754447',
+                'strn' => 'A053307-0',
                 'province_id' => $punjab->id,
-                'address' => 'Lahore, Pakistan',
-                'phone' => '+92-300-0000000',
-                'email' => 'info@example.com',
+                'address' => 'AMJAD CHADHAR MARKET, MAIN PIA ROAD, JOHAR TOWN, Lahore',
+                'phone' => '+923224612373',
+                'email' => 'ahmednawaz24.na@gmail.com',
                 'fbr_environment' => 'sandbox',
             ],
         );

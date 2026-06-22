@@ -8,8 +8,9 @@ use App\Models\Invoice;
 use App\Support\FbrEnvironmentContext;
 use App\Support\InvoicePayloadBuilder;
 use App\Support\TenantContext;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -147,11 +148,24 @@ class FbrDigitalInvoiceService
             $log->update([
                 'http_status' => $response?->status(),
                 'status' => 'failed',
-                'response_payload' => $response?->json(),
+                'response_payload' => $this->responsePayload($response),
                 'error_message' => $exception->getMessage(),
             ]);
 
             throw $exception;
         }
+    }
+
+    private function responsePayload(?Response $response): ?array
+    {
+        if (! $response) {
+            return null;
+        }
+
+        $json = $response->json();
+
+        return is_array($json) ? $json : [
+            'raw_response' => $response->body(),
+        ];
     }
 }
