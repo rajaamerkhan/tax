@@ -11,7 +11,9 @@ use App\Models\InvoiceItem;
 use App\Models\Province;
 use App\Models\Scenario;
 use App\Models\User;
+use App\Services\InvoiceQrCodeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -91,5 +93,31 @@ class InvoicePdfQrCodeTest extends TestCase
             ->assertSee('Click to verify')
             ->assertSee('data:image/svg+xml;base64,', false)
             ->assertSee('FBR-123456');
+    }
+
+    #[Test]
+    public function qr_service_uses_current_production_host_when_configured_verify_url_is_local(): void
+    {
+        config(['fbr.verify_url' => 'http://localhost/invoices/verify']);
+        $this->seed();
+
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        $invoice = Invoice::create([
+            'invoice_number' => 'INV-QR-HOST',
+            'invoice_date' => now()->toDateString(),
+            'invoice_type' => 'Sale Invoice',
+            'environment' => 'sandbox',
+            'buyer_name' => 'QR Host Buyer',
+            'status' => InvoiceStatus::Editable,
+            'fbr_invoice_id' => 'FBR-HOST-123',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->app->instance('request', Request::create('http://tax.ccsite.com.es/invoices/'.$invoice->id.'/print'));
+
+        $verificationUrl = app(InvoiceQrCodeService::class)->verificationUrl($invoice);
+
+        $this->assertSame('http://tax.ccsite.com.es/invoices/verify/FBR-HOST-123', $verificationUrl);
     }
 }

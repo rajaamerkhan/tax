@@ -10,7 +10,7 @@ class InvoiceQrCodeService
 {
     public function payload(Invoice $invoice): string
     {
-        $verifyUrl = rtrim((string) config('fbr.verify_url'), '/');
+        $verifyUrl = $this->baseVerifyUrl();
 
         if ($verifyUrl !== '' && $invoice->fbr_invoice_id) {
             return $verifyUrl.'/'.$invoice->fbr_invoice_id;
@@ -21,7 +21,7 @@ class InvoiceQrCodeService
 
     public function verificationUrl(Invoice $invoice): ?string
     {
-        $verifyUrl = rtrim((string) config('fbr.verify_url'), '/');
+        $verifyUrl = $this->baseVerifyUrl();
 
         if ($verifyUrl === '' || ! $invoice->fbr_invoice_id) {
             return null;
@@ -50,5 +50,25 @@ class InvoiceQrCodeService
         Storage::disk('public')->put($path, $this->svgMarkup($invoice, $size));
 
         return $path;
+    }
+
+    private function baseVerifyUrl(): string
+    {
+        $configuredUrl = rtrim((string) config('fbr.verify_url'), '/');
+        $request = request();
+
+        if ($request && ! $this->isLocalUrl($request->root()) && ($configuredUrl === '' || $this->isLocalUrl($configuredUrl))) {
+            return rtrim($request->root(), '/').'/invoices/verify';
+        }
+
+        return $configuredUrl;
+    }
+
+    private function isLocalUrl(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return in_array($host, ['localhost', '127.0.0.1', '0.0.0.0', '::1'], true)
+            || str_ends_with((string) $host, '.localhost');
     }
 }
