@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\Client;
 use App\Models\CompanyProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,5 +82,46 @@ class CompanyProfileControllerTest extends TestCase
         $this->assertSame('production-secret-token', $company->fbr_production_token);
         $this->assertSame('production', $company->fbr_environment->value);
         $this->assertSame('distributor', $company->fbr_business_nature);
+    }
+
+    #[Test]
+    public function owner_can_update_a_specific_clients_company_profile(): void
+    {
+        $owner = User::factory()->create([
+            'client_id' => null,
+            'role' => UserRole::Owner,
+        ]);
+        $client = Client::factory()->create(['name' => 'Client One']);
+        $otherClient = Client::factory()->create(['name' => 'Client Two']);
+        $token = str_repeat('b', 36);
+
+        $this->actingAs($owner)
+            ->get(route('owner.clients.company.edit', $client))
+            ->assertOk()
+            ->assertSee('Client One Company Profile');
+
+        $this->actingAs($owner)->put(route('owner.clients.company.update', $client), [
+            'name' => 'Client One Seller',
+            'ntn_cnic' => '1234567-8',
+            'strn' => '1234567890123',
+            'province_id' => null,
+            'address' => 'Client One Address',
+            'phone' => '+92-300-0000000',
+            'email' => 'seller-one@example.test',
+            'fbr_sandbox_token' => $token,
+            'fbr_environment' => 'sandbox',
+            'fbr_business_nature' => 'distributor',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('company_profiles', [
+            'client_id' => $client->id,
+            'name' => 'Client One Seller',
+            'ntn_cnic' => '12345678',
+            'address' => 'Client One Address',
+        ]);
+        $this->assertDatabaseMissing('company_profiles', [
+            'client_id' => $otherClient->id,
+            'name' => 'Client One Seller',
+        ]);
     }
 }

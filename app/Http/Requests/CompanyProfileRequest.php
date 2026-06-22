@@ -11,7 +11,7 @@ class CompanyProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->canManageSettings() ?? false;
+        return ($this->user()?->canManageSettings() || $this->user()?->canManageClients()) ?? false;
     }
 
     public function rules(): array

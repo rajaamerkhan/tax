@@ -22,6 +22,10 @@
         <label class="form-label">Client Email</label>
         <input class="form-control" type="email" name="email" value="{{ old('email', $client->email) }}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-no-autofill data-lpignore="true" data-1p-ignore>
     </div>
+    <div class="col-md-3">
+        <label class="form-label">Monthly Invoice Limit</label>
+        <input class="form-control" type="number" name="max_invoices_per_month" min="0" value="{{ old('max_invoices_per_month', $client->max_invoices_per_month ?? 30) }}" required>
+    </div>
 </div>
 
 <div class="mt-4">

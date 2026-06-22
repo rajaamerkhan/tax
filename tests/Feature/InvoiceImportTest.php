@@ -66,8 +66,8 @@ class InvoiceImportTest extends TestCase
         $this->assertSame(912155.0, (float) $item->value_excluding_sales_tax);
         $this->assertSame(187014.0, (float) $item->sales_tax);
         $this->assertSame(1038966.67, round((float) $item->fixed_notified_value, 2));
-        $this->assertSame(1225980.67, (float) $item->total_value);
-        $this->assertSame(1225980.67, (float) $invoice->grand_total);
+        $this->assertSame(1099169.0, (float) $item->total_value);
+        $this->assertSame(1099169.0, (float) $invoice->grand_total);
     }
 
     #[Test]
@@ -141,7 +141,7 @@ class InvoiceImportTest extends TestCase
         $this->assertSame(1, Invoice::query()->where('invoice_number', '797')->count());
         $this->assertSame(InvoiceStatus::Draft, $invoice->status);
         $this->assertSame('CEMENT', $invoice->items->first()->description);
-        $this->assertSame(1225980.67, (float) $invoice->grand_total);
+        $this->assertSame(1099169.0, (float) $invoice->grand_total);
     }
 
     #[Test]

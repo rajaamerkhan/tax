@@ -27,6 +27,7 @@
                                 @csrf
                                 <button class="btn btn-sm btn-primary" @disabled($client->status !== 'active')>Manage</button>
                             </form>
+                            <a class="btn btn-sm btn-outline-light" href="{{ route('owner.clients.company.edit', $client) }}">Company</a>
                             <a class="btn btn-sm btn-outline-light" href="{{ route('owner.clients.edit', $client) }}">Edit</a>
                         </div>
                     </td>

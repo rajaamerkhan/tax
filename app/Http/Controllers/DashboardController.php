@@ -23,6 +23,7 @@ class DashboardController extends Controller
 
         $environment = $this->environmentContext->current();
         $clientId = $this->tenantContext->clientId(auth()->user());
+        $client = $this->tenantContext->client(auth()->user());
         $monthly = Invoice::query()
             ->forClient($clientId)
             ->where('environment', $environment)
@@ -41,6 +42,21 @@ class DashboardController extends Controller
 
         $submissionAttempts = Invoice::query()->forClient($clientId)->where('environment', $environment)->whereNotNull('fbr_submitted_at')->count();
         $submissionSuccess = Invoice::query()->forClient($clientId)->where('environment', $environment)->whereIn('status', [InvoiceStatus::Submitted->value, InvoiceStatus::Editable->value, InvoiceStatus::Locked->value])->count();
+        $totalInvoices = Invoice::forClient($clientId)->where('environment', $environment)->count();
+        $totalCustomers = Customer::forClient($clientId)->count();
+        $pendingFbrSubmissions = Invoice::forClient($clientId)->where('environment', $environment)->whereIn('status', [InvoiceStatus::Validated->value, InvoiceStatus::Failed->value])->count();
+        $monthlySeries = collect(range(11, 0))->map(function (int $monthsAgo) use ($monthlyGrouped): array {
+            $month = now()->startOfMonth()->subMonths($monthsAgo);
+            $row = $monthlyGrouped->firstWhere('month', $month->format('Y-m'));
+
+            return [
+                'label' => $month->format('M Y'),
+                'revenue' => (float) ($row['revenue'] ?? 0),
+                'invoice_count' => (int) ($row['invoice_count'] ?? 0),
+            ];
+        });
+        $quotaLimit = (int) ($client?->max_invoices_per_month ?? 30);
+        $quotaUsed = $client?->invoiceCountForMonth() ?? 0;
 
         $topCustomers = Customer::query()
             ->forClient($clientId)
@@ -58,14 +74,20 @@ class DashboardController extends Controller
             ->get();
 
         return view('dashboard.index', [
-            'totalInvoices' => Invoice::forClient($clientId)->where('environment', $environment)->count(),
+            'client' => $client,
+            'totalInvoices' => $totalInvoices,
             'totalTaxAmount' => Invoice::forClient($clientId)->where('environment', $environment)->get()->sum(fn (Invoice $invoice) => $invoice->sales_tax_amount + $invoice->extra_tax_amount + $invoice->further_tax_amount + $invoice->fed_amount),
-            'pendingFbrSubmissions' => Invoice::forClient($clientId)->where('environment', $environment)->whereIn('status', [InvoiceStatus::Validated->value, InvoiceStatus::Failed->value])->count(),
-            'totalCustomers' => Customer::forClient($clientId)->count(),
-            'monthlyLabels' => $monthlyGrouped->pluck('month'),
-            'monthlyRevenue' => $monthlyGrouped->pluck('revenue'),
-            'monthlyInvoiceCount' => $monthlyGrouped->pluck('invoice_count'),
+            'pendingFbrSubmissions' => $pendingFbrSubmissions,
+            'totalCustomers' => $totalCustomers,
+            'monthlyLabels' => $monthlySeries->pluck('label'),
+            'monthlyRevenue' => $monthlySeries->pluck('revenue'),
+            'monthlyInvoiceCount' => $monthlySeries->pluck('invoice_count'),
             'submissionSuccessRate' => $submissionAttempts > 0 ? round(($submissionSuccess / $submissionAttempts) * 100, 2) : 0,
+            'submissionSuccess' => $submissionSuccess,
+            'submissionAttempts' => $submissionAttempts,
+            'quotaLimit' => $quotaLimit,
+            'quotaUsed' => $quotaUsed,
+            'quotaRemaining' => max($quotaLimit - $quotaUsed, 0),
             'recentInvoices' => Invoice::forClient($clientId)->where('environment', $environment)->latest()->limit(8)->get(),
             'topCustomers' => $topCustomers,
         ]);

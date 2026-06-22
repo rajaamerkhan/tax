@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 class Client extends Model
 {
@@ -17,15 +18,45 @@ class Client extends Model
         'email',
         'phone',
         'status',
+        'max_invoices_per_month',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'max_invoices_per_month' => 'integer',
+        ];
+    }
 
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     public function companyProfile(): HasOne
     {
         return $this->hasOne(CompanyProfile::class);
+    }
+
+    public function invoiceCountForMonth(?Carbon $month = null): int
+    {
+        $month ??= now();
+
+        return $this->invoices()
+            ->whereBetween('invoice_date', [
+                $month->copy()->startOfMonth()->toDateString(),
+                $month->copy()->endOfMonth()->toDateString(),
+            ])
+            ->count();
+    }
+
+    public function remainingInvoicesForMonth(?Carbon $month = null): int
+    {
+        return max(((int) $this->max_invoices_per_month) - $this->invoiceCountForMonth($month), 0);
     }
 }

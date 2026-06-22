@@ -15,6 +15,7 @@ use App\Models\SroSchedule;
 use App\Models\TaxRate;
 use App\Services\InvoiceQrCodeService;
 use App\Support\FbrEnvironmentContext;
+use App\Support\ClientInvoiceQuota;
 use App\Support\TenantContext;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +31,7 @@ class InvoiceController extends Controller
 {
     public function __construct(
         private readonly FbrEnvironmentContext $environmentContext,
+        private readonly ClientInvoiceQuota $invoiceQuota,
         private readonly TenantContext $tenantContext,
     ) {}
 
@@ -81,8 +83,15 @@ class InvoiceController extends Controller
 
     public function store(InvoiceRequest $request): RedirectResponse
     {
+        $clientId = $this->tenantContext->clientId($request->user());
+        $quotaError = $this->invoiceQuota->firstLimitError($clientId, [$request->validated('invoice_date')]);
+
+        if ($quotaError) {
+            return back()->withInput()->with('error', $quotaError);
+        }
+
         $invoice = Invoice::create(array_merge($request->safe()->except('items'), [
-            'client_id' => $this->tenantContext->clientId($request->user()),
+            'client_id' => $clientId,
             'environment' => $this->environmentContext->current(),
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,

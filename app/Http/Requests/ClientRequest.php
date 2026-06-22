@@ -22,6 +22,7 @@ class ClientRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:100'],
             'status' => ['required', 'in:active,inactive'],
+            'max_invoices_per_month' => ['required', 'integer', 'min:0', 'max:100000'],
             'admin_email' => [
                 'required',
                 'email',
@@ -34,7 +35,9 @@ class ClientRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $data = [];
+        $data = [
+            'max_invoices_per_month' => $this->input('max_invoices_per_month', 30),
+        ];
 
         foreach (['email', 'admin_email'] as $field) {
             if ($this->has($field)) {
@@ -42,8 +45,6 @@ class ClientRequest extends FormRequest
             }
         }
 
-        if ($data !== []) {
-            $this->merge($data);
-        }
+        $this->merge($data);
     }
 }

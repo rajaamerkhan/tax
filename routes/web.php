@@ -40,6 +40,8 @@ Route::middleware('auth')->group(function (): void {
 
     Route::middleware('role:owner')->prefix('owner')->name('owner.')->group(function (): void {
         Route::post('/clients/{client}/manage', [OwnerClientController::class, 'manage'])->name('clients.manage');
+        Route::get('/clients/{client}/company', [CompanyProfileController::class, 'editClient'])->name('clients.company.edit');
+        Route::put('/clients/{client}/company', [CompanyProfileController::class, 'updateClient'])->name('clients.company.update');
         Route::delete('/managed-client', [OwnerClientController::class, 'stopManaging'])->name('clients.stop-managing');
         Route::resource('clients', OwnerClientController::class)->except(['show', 'destroy']);
     });

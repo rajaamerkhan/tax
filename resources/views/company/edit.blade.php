@@ -2,8 +2,13 @@
 @section('title', 'Company Profile')
 @section('content')
 <div class="panel">
-    <div class="panel-header d-flex justify-content-between align-items-center"><h2>Company Profile</h2><form method="POST" action="{{ route('company.sync-references') }}">@csrf <button class="btn btn-outline-light">Sync FBR Reference Data</button></form></div>
-    <form method="POST" action="{{ route('company.update') }}" class="row g-3">
+    <div class="panel-header d-flex justify-content-between align-items-center">
+        <h2>{{ $clientName ? $clientName.' Company Profile' : 'Company Profile' }}</h2>
+        @if($syncRoute)
+            <form method="POST" action="{{ $syncRoute }}">@csrf <button class="btn btn-outline-light">Sync FBR Reference Data</button></form>
+        @endif
+    </div>
+    <form method="POST" action="{{ $updateRoute }}" class="row g-3">
         @csrf @method('PUT')
         <div class="col-md-6"><label class="form-label">Company Name</label><input class="form-control" name="name" value="{{ old('name', $company->name) }}"></div>
         <div class="col-md-3"><label class="form-label">NTN / CNIC</label><input class="form-control" name="ntn_cnic" value="{{ old('ntn_cnic', $company->ntn_cnic) }}"></div>

@@ -43,7 +43,7 @@ class ClientController extends Controller
     public function store(ClientRequest $request): RedirectResponse
     {
         $client = DB::transaction(function () use ($request): Client {
-            $client = Client::create(array_merge($request->safe()->only(['name', 'email', 'phone', 'status']), [
+            $client = Client::create(array_merge($request->safe()->only(['name', 'email', 'phone', 'status', 'max_invoices_per_month']), [
                 'contact_name' => $request->validated('name'),
             ]));
 
@@ -72,7 +72,7 @@ class ClientController extends Controller
     public function update(ClientRequest $request, Client $client): RedirectResponse
     {
         DB::transaction(function () use ($request, $client): void {
-            $client->update(array_merge($request->safe()->only(['name', 'email', 'phone', 'status']), [
+            $client->update(array_merge($request->safe()->only(['name', 'email', 'phone', 'status', 'max_invoices_per_month']), [
                 'contact_name' => $request->validated('name'),
             ]));
 

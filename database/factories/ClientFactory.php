@@ -17,6 +17,7 @@ class ClientFactory extends Factory
             'email' => fake()->companyEmail(),
             'phone' => fake()->e164PhoneNumber(),
             'status' => 'active',
+            'max_invoices_per_month' => 30,
         ];
     }
 }

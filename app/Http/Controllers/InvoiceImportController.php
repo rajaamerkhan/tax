@@ -12,6 +12,7 @@ use App\Models\InvoiceImportBatch;
 use App\Models\InvoiceItem;
 use App\Models\Province;
 use App\Models\Scenario;
+use App\Support\ClientInvoiceQuota;
 use App\Support\FbrEnvironmentContext;
 use App\Support\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +30,7 @@ class InvoiceImportController extends Controller
 {
     public function __construct(
         private readonly FbrEnvironmentContext $environmentContext,
+        private readonly ClientInvoiceQuota $invoiceQuota,
         private readonly TenantContext $tenantContext,
     ) {}
 
@@ -116,13 +118,34 @@ class InvoiceImportController extends Controller
         abort_if(! empty($import->errors), 422, 'Fix import errors before importing.');
 
         $grouped = collect($import->preview_rows)->groupBy('invoice_number');
+        $environment = $this->environmentContext->current($import->client_id);
+        $newInvoiceDates = [];
+
+        foreach ($grouped as $invoiceNumber => $rows) {
+            $exists = Invoice::query()
+                ->where('client_id', $import->client_id)
+                ->where('environment', $environment)
+                ->where('invoice_number', $invoiceNumber)
+                ->exists();
+
+            if (! $exists) {
+                $newInvoiceDates[] = $rows->first()['invoice_date'];
+            }
+        }
+
+        $quotaError = $this->invoiceQuota->firstLimitError($import->client_id, $newInvoiceDates);
+
+        if ($quotaError) {
+            return back()->with('error', $quotaError);
+        }
+
         $count = 0;
 
         foreach ($grouped as $invoiceNumber => $rows) {
             $first = $rows->first();
             $invoice = Invoice::query()
                 ->where('client_id', $import->client_id)
-                ->where('environment', $this->environmentContext->current($import->client_id))
+                ->where('environment', $environment)
                 ->where('invoice_number', $invoiceNumber)
                 ->first();
 

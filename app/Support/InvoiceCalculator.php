@@ -32,7 +32,7 @@ class InvoiceCalculator
         $furtherTax = (float) ($item['further_tax'] ?? 0);
         $fedPayable = (float) ($item['fed_payable'] ?? 0);
         $totalBasis = $isThirdSchedule && $fixedNotifiedValue !== null && $fixedNotifiedValue > 0
-            ? $fixedNotifiedValue
+            ? $valueExcludingSalesTax
             : $grossValue;
         $totalValue = max($totalBasis + $salesTax + $extraTax + $furtherTax + $fedPayable - $discount, 0);
 

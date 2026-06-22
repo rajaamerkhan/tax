@@ -215,7 +215,7 @@
                 const valueExcludingTax = isThirdSchedule && fixedNotifiedValue > 0
                     ? grossValue
                     : Math.max(grossValue - tax, 0);
-                const totalBasis = isThirdSchedule && fixedNotifiedValue > 0 ? fixedNotifiedValue : grossValue;
+                const totalBasis = isThirdSchedule && fixedNotifiedValue > 0 ? valueExcludingTax : grossValue;
                 const total = Math.max(totalBasis + tax + extraTax + furtherTax + fedPayable - discount, 0);
                 const totalField = row.querySelector('.line-total');
                 const baseField = row.querySelector('.value-excl-tax');

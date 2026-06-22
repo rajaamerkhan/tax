@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CompanyProfileRequest;
+use App\Models\Client;
 use App\Jobs\SyncFbrReferenceDataJob;
 use App\Models\CompanyProfile;
 use App\Models\Province;
@@ -18,29 +19,37 @@ class CompanyProfileController extends Controller
 
     public function edit(): View
     {
-        return view('company.edit', [
-            'company' => CompanyProfile::firstOrNew(['client_id' => $this->tenantContext->clientId(auth()->user())]),
-            'provinces' => $this->provinceOptions(),
-            'businessNatures' => FbrSandboxProfile::businessNatures(),
-        ]);
+        $clientId = $this->tenantContext->clientId(auth()->user());
+
+        return view('company.edit', $this->formData(
+            CompanyProfile::firstOrNew(['client_id' => $clientId]),
+            route('company.update'),
+            route('company.sync-references'),
+        ));
+    }
+
+    public function editClient(Client $client): View
+    {
+        return view('company.edit', $this->formData(
+            CompanyProfile::firstOrNew(['client_id' => $client->id]),
+            route('owner.clients.company.update', $client),
+            null,
+            $client->name,
+        ));
     }
 
     public function update(CompanyProfileRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        foreach (['fbr_token', 'fbr_sandbox_token', 'fbr_production_token'] as $tokenField) {
-            if (! $request->filled($tokenField)) {
-                unset($data[$tokenField]);
-            }
-        }
-
-        CompanyProfile::query()->updateOrCreate(
-            ['client_id' => $this->tenantContext->clientId($request->user())],
-            array_merge($data, ['client_id' => $this->tenantContext->clientId($request->user())]),
-        );
+        $this->saveProfile($request, $this->tenantContext->clientId($request->user()));
 
         return back()->with('status', 'Company profile updated successfully.');
+    }
+
+    public function updateClient(CompanyProfileRequest $request, Client $client): RedirectResponse
+    {
+        $this->saveProfile($request, $client->id);
+
+        return back()->with('status', $client->name.' company profile updated successfully.');
     }
 
     public function syncReferences(): RedirectResponse
@@ -84,5 +93,33 @@ class CompanyProfileController extends Controller
 
             return $model;
         })->filter()->values();
+    }
+
+    private function formData(CompanyProfile $company, string $updateRoute, ?string $syncRoute, ?string $clientName = null): array
+    {
+        return [
+            'company' => $company,
+            'provinces' => $this->provinceOptions(),
+            'businessNatures' => FbrSandboxProfile::businessNatures(),
+            'updateRoute' => $updateRoute,
+            'syncRoute' => $syncRoute,
+            'clientName' => $clientName,
+        ];
+    }
+
+    private function saveProfile(CompanyProfileRequest $request, ?int $clientId): void
+    {
+        $data = $request->validated();
+
+        foreach (['fbr_token', 'fbr_sandbox_token', 'fbr_production_token'] as $tokenField) {
+            if (! $request->filled($tokenField)) {
+                unset($data[$tokenField]);
+            }
+        }
+
+        CompanyProfile::query()->updateOrCreate(
+            ['client_id' => $clientId],
+            array_merge($data, ['client_id' => $clientId]),
+        );
     }
 }

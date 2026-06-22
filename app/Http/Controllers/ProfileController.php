@@ -14,9 +14,19 @@ class ProfileController extends Controller
 
     public function edit(): View
     {
+        $client = $this->tenantContext->client(auth()->user());
+        $company = $client?->companyProfile;
+        $usedInvoices = $client?->invoiceCountForMonth() ?? 0;
+        $invoiceLimit = (int) ($client?->max_invoices_per_month ?? 30);
+
         return view('profile.edit', [
             'profileUser' => $this->profileUser(),
             'isManagedClientProfile' => $this->tenantContext->isManagingClient(auth()->user()),
+            'client' => $client,
+            'company' => $company,
+            'usedInvoices' => $usedInvoices,
+            'invoiceLimit' => $invoiceLimit,
+            'remainingInvoices' => max($invoiceLimit - $usedInvoices, 0),
         ]);
     }
 

@@ -6,7 +6,7 @@
     <title>{{ config('app.name') }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
@@ -34,19 +34,29 @@
                 @endif
                 @if(! auth()->user()?->isOwner() || $isManagingClient)
                     <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
-                    <a class="nav-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" href="{{ route('invoices.index') }}"><i class="bi bi-receipt-cutoff"></i> Invoices</a>
                     <a class="nav-link {{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}"><i class="bi bi-people"></i> Customers</a>
-                    @if(auth()->user()?->canEditInvoices())
-                        <a class="nav-link {{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.index') }}"><i class="bi bi-upload"></i> Import</a>
-                    @endif
+                    <div class="nav-group {{ request()->routeIs('invoices.*') || request()->routeIs('imports.*') ? 'open' : '' }}">
+                        <a class="nav-link nav-group-toggle {{ request()->routeIs('invoices.*') || request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('invoices.index') }}">
+                            <span><i class="bi bi-receipt-cutoff"></i> Invoices</span>
+                            <i class="bi bi-chevron-left nav-group-chevron"></i>
+                        </a>
+                        <div class="nav-submenu">
+                            <a class="nav-sublink {{ request()->routeIs('invoices.index') || request()->routeIs('invoices.show') ? 'active' : '' }}" href="{{ route('invoices.index') }}"><i class="bi bi-circle"></i> All Invoices</a>
+                            @if(auth()->user()?->canEditInvoices())
+                                <a class="nav-sublink {{ request()->routeIs('invoices.create') ? 'active' : '' }}" href="{{ route('invoices.create') }}"><i class="bi bi-circle"></i> Create Invoice</a>
+                                <a class="nav-sublink {{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.index') }}"><i class="bi bi-circle"></i> Import Invoices</a>
+                            @endif
+                        </div>
+                    </div>
                 @endif
-                @if(auth()->user()?->canManageSettings())
-                    <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}"><i class="bi bi-person-gear"></i> Users</a>
-                    <a class="nav-link {{ request()->routeIs('company.*') ? 'active' : '' }}" href="{{ route('company.edit') }}"><i class="bi bi-building"></i> Company</a>
-                    <a class="nav-link {{ request()->routeIs('reference-data.*') ? 'active' : '' }}" href="{{ route('reference-data.index') }}"><i class="bi bi-diagram-3"></i> Reference Data</a>
-                    <a class="nav-link {{ request()->routeIs('admin.mock-fbr-console') ? 'active' : '' }}" href="{{ route('admin.mock-fbr-console') }}"><i class="bi bi-terminal"></i> Mock FBR Console</a>
+                @if($isManagingClient)
+                    <a class="nav-link {{ request()->routeIs('company.*') ? 'active' : '' }}" href="{{ route('company.edit') }}"><i class="bi bi-building"></i> Company Profile</a>
                 @endif
                 <a class="nav-link {{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"><i class="bi bi-person-circle"></i> Profile</a>
+                <form method="POST" action="{{ route('logout') }}" class="m-0">
+                    @csrf
+                    <button class="nav-link nav-logout w-100" type="submit"><i class="bi bi-box-arrow-right"></i> Logout</button>
+                </form>
             </nav>
         </div>
         <div class="small text-secondary">
@@ -57,10 +67,6 @@
                     <button class="btn btn-sm btn-outline-light w-100">Exit Client</button>
                 </form>
             @endif
-            @php($sidebarUser = $isManagingClient ? $tenantContext->clientUser(auth()->user()) : auth()->user())
-            <div>{{ $sidebarUser?->name }}</div>
-            <div>{{ $sidebarUser?->role->label() }}</div>
-            <div class="sidebar-version">{{ config('app.name') }} v{{ config('app.version') }}</div>
         </div>
     </aside>
 
@@ -74,10 +80,6 @@
                 @if((! auth()->user()?->isOwner() || $isManagingClient) && auth()->user()?->canEditInvoices())
                     <a href="{{ route('invoices.create') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Invoice</a>
                 @endif
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="btn btn-outline-light">Logout</button>
-                </form>
             </div>
         </header>
 

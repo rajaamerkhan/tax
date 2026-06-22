@@ -23,11 +23,20 @@ class SaasAccessControlTest extends TestCase
             'role' => UserRole::Owner,
         ]);
 
+        $this->actingAs($owner)
+            ->get(route('owner.clients.index'))
+            ->assertOk()
+            ->assertSee('Clients')
+            ->assertSee('New Client')
+            ->assertSee('Company')
+            ->assertSee('owner/clients/create', false);
+
         $response = $this->actingAs($owner)->post(route('owner.clients.store'), [
             'name' => 'Acme Textiles',
             'email' => 'accounts@acme.test',
             'phone' => '+92-300-0000000',
             'status' => 'active',
+            'max_invoices_per_month' => 45,
             'admin_email' => 'admin@acme.test',
             'admin_password' => 'secure-password',
             'admin_password_confirmation' => 'secure-password',
@@ -35,6 +44,7 @@ class SaasAccessControlTest extends TestCase
 
         $response->assertRedirect();
         $client = Client::query()->where('name', 'Acme Textiles')->firstOrFail();
+        $this->assertSame(45, $client->max_invoices_per_month);
 
         $this->assertDatabaseHas('users', [
             'client_id' => $client->id,
@@ -126,7 +136,7 @@ class SaasAccessControlTest extends TestCase
             ->assertSee('Invoices')
             ->assertSee('Customers')
             ->assertSee('Import')
-            ->assertSee('Company')
+            ->assertSee('Company Profile')
             ->assertSee('Profile')
             ->assertSee('Exit Client')
             ->assertDontSee('building-add')
@@ -178,7 +188,10 @@ class SaasAccessControlTest extends TestCase
             'email' => 'owner@example.test',
             'role' => UserRole::Owner,
         ]);
-        $client = Client::factory()->create(['name' => 'Managed Client']);
+        $client = Client::factory()->create([
+            'name' => 'Managed Client',
+            'max_invoices_per_month' => 30,
+        ]);
         $clientAdmin = User::factory()->create([
             'client_id' => $client->id,
             'name' => 'Client Admin',
@@ -190,9 +203,11 @@ class SaasAccessControlTest extends TestCase
             ->withSession(['managed_client_id' => $client->id, 'managed_client_name' => $client->name])
             ->get(route('profile.edit'))
             ->assertOk()
-            ->assertSee('Editing the selected client account profile')
-            ->assertSee('value="Client Admin"', false)
-            ->assertSee('value="client-admin@example.test"', false)
+            ->assertSee('Client Admin')
+            ->assertSee('client-admin@example.test')
+            ->assertSee('Billing Plan')
+            ->assertSee('Used this month: 0 / 30')
+            ->assertDontSee('Update Profile')
             ->assertDontSee('value="Real Owner"', false)
             ->assertDontSee('Current Password');
 
@@ -203,19 +218,60 @@ class SaasAccessControlTest extends TestCase
                 'email' => 'updated-client-admin@example.test',
                 'phone' => '+92-300-9999999',
             ])
-            ->assertRedirect();
+            ->assertForbidden();
 
         $this->assertDatabaseHas('users', [
             'id' => $clientAdmin->id,
             'client_id' => $client->id,
-            'name' => 'Updated Client Admin',
-            'email' => 'updated-client-admin@example.test',
+            'name' => 'Client Admin',
+            'email' => 'client-admin@example.test',
         ]);
         $this->assertDatabaseHas('users', [
             'id' => $owner->id,
             'name' => 'Real Owner',
             'email' => 'owner@example.test',
         ]);
+    }
+
+    #[Test]
+    public function client_cannot_create_more_than_monthly_invoice_limit(): void
+    {
+        $client = Client::factory()->create([
+            'name' => 'Limited Client',
+            'max_invoices_per_month' => 1,
+        ]);
+        $admin = User::factory()->create([
+            'client_id' => $client->id,
+            'role' => UserRole::Admin,
+        ]);
+
+        Invoice::create([
+            'client_id' => $client->id,
+            'invoice_number' => 'LIMIT-001',
+            'invoice_date' => now()->toDateString(),
+            'invoice_type' => 'Sale Invoice',
+            'environment' => 'sandbox',
+            'buyer_name' => 'Existing Buyer',
+            'status' => 'draft',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post(route('invoices.store'), [
+            'invoice_number' => 'LIMIT-002',
+            'invoice_date' => now()->toDateString(),
+            'invoice_type' => 'Sale Invoice',
+            'buyer_name' => 'New Buyer',
+            'items' => [[
+                'description' => 'Test item',
+                'quantity' => 1,
+                'unit_price' => 100,
+                'rate_percent' => 18,
+            ]],
+        ])->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertSame(1, Invoice::query()->where('client_id', $client->id)->count());
     }
 
     private function clientWithInvoice(string $clientName, string $invoiceNumber, string $buyerName): array

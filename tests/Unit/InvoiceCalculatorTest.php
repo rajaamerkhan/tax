@@ -29,7 +29,7 @@ class InvoiceCalculatorTest extends TestCase
     }
 
     #[Test]
-    public function fixed_notified_value_is_only_used_as_third_schedule_line_basis(): void
+    public function fixed_notified_value_is_only_used_as_third_schedule_tax_basis(): void
     {
         $calculator = app(InvoiceCalculator::class);
 
@@ -47,7 +47,7 @@ class InvoiceCalculatorTest extends TestCase
 
         $this->assertSame(912155.0, $item['value_excluding_sales_tax']);
         $this->assertSame(187014.0, $item['sales_tax']);
-        $this->assertSame(1225980.67, $item['total_value']);
+        $this->assertSame(1099169.0, $item['total_value']);
     }
 
     #[Test]
