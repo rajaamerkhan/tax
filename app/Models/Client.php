@@ -48,6 +48,7 @@ class Client extends Model
         $month ??= now();
 
         return $this->invoices()
+            ->whereNull('invoices.deleted_at')
             ->whereBetween('invoice_date', [
                 $month->copy()->startOfMonth()->toDateString(),
                 $month->copy()->endOfMonth()->toDateString(),

@@ -274,6 +274,60 @@ class SaasAccessControlTest extends TestCase
         $this->assertSame(1, Invoice::query()->where('client_id', $client->id)->count());
     }
 
+    #[Test]
+    public function owner_deleted_invoices_do_not_count_against_monthly_invoice_limit(): void
+    {
+        $client = Client::factory()->create([
+            'name' => 'Limited Client',
+            'max_invoices_per_month' => 1,
+        ]);
+        $owner = User::factory()->create([
+            'client_id' => null,
+            'role' => UserRole::Owner,
+        ]);
+        $admin = User::factory()->create([
+            'client_id' => $client->id,
+            'role' => UserRole::Admin,
+        ]);
+        $deletedInvoice = Invoice::create([
+            'client_id' => $client->id,
+            'invoice_number' => 'DELETED-LIMIT-001',
+            'invoice_date' => now()->toDateString(),
+            'invoice_type' => 'Sale Invoice',
+            'environment' => 'sandbox',
+            'buyer_name' => 'Deleted Buyer',
+            'status' => 'draft',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['managed_client_id' => $client->id, 'managed_client_name' => $client->name])
+            ->delete(route('invoices.destroy', $deletedInvoice))
+            ->assertRedirect(route('invoices.index'));
+
+        $this->assertSoftDeleted('invoices', ['id' => $deletedInvoice->id]);
+        $this->assertSame(0, $client->fresh()->invoiceCountForMonth());
+
+        $this->actingAs($admin)->post(route('invoices.store'), [
+            'invoice_number' => 'ACTIVE-LIMIT-001',
+            'invoice_date' => now()->toDateString(),
+            'invoice_type' => 'Sale Invoice',
+            'buyer_name' => 'New Buyer',
+            'items' => [[
+                'description' => 'Test item',
+                'quantity' => 1,
+                'unit_price' => 100,
+                'rate_percent' => 18,
+            ]],
+        ])->assertRedirect()
+            ->assertSessionDoesntHaveErrors()
+            ->assertSessionMissing('error');
+
+        $this->assertSame(1, Invoice::query()->where('client_id', $client->id)->count());
+        $this->assertSame(2, Invoice::withTrashed()->where('client_id', $client->id)->count());
+    }
+
     private function clientWithInvoice(string $clientName, string $invoiceNumber, string $buyerName): array
     {
         $client = Client::factory()->create(['name' => $clientName]);
