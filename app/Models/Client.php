@@ -43,12 +43,13 @@ class Client extends Model
         return $this->hasOne(CompanyProfile::class);
     }
 
-    public function invoiceCountForMonth(?Carbon $month = null): int
+    public function invoiceCountForMonth(?Carbon $month = null, ?string $environment = null): int
     {
         $month ??= now();
 
         return $this->invoices()
             ->whereNull('invoices.deleted_at')
+            ->when($environment !== null, fn ($query) => $query->where('environment', $environment))
             ->whereBetween('invoice_date', [
                 $month->copy()->startOfMonth()->toDateString(),
                 $month->copy()->endOfMonth()->toDateString(),
@@ -56,8 +57,8 @@ class Client extends Model
             ->count();
     }
 
-    public function remainingInvoicesForMonth(?Carbon $month = null): int
+    public function remainingInvoicesForMonth(?Carbon $month = null, ?string $environment = null): int
     {
-        return max(((int) $this->max_invoices_per_month) - $this->invoiceCountForMonth($month), 0);
+        return max(((int) $this->max_invoices_per_month) - $this->invoiceCountForMonth($month, $environment), 0);
     }
 }

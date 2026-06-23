@@ -4,19 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Support\FbrEnvironmentContext;
 use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function __construct(private readonly TenantContext $tenantContext) {}
+    public function __construct(
+        private readonly TenantContext $tenantContext,
+        private readonly FbrEnvironmentContext $environmentContext,
+    ) {}
 
     public function edit(): View
     {
         $client = $this->tenantContext->client(auth()->user());
         $company = $client?->companyProfile;
-        $usedInvoices = $client?->invoiceCountForMonth() ?? 0;
+        $usedInvoices = $client?->invoiceCountForMonth(environment: $this->environmentContext->current()) ?? 0;
         $invoiceLimit = (int) ($client?->max_invoices_per_month ?? 30);
 
         return view('profile.edit', [

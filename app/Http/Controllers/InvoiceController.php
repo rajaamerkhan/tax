@@ -84,7 +84,8 @@ class InvoiceController extends Controller
     public function store(InvoiceRequest $request): RedirectResponse
     {
         $clientId = $this->tenantContext->clientId($request->user());
-        $quotaError = $this->invoiceQuota->firstLimitError($clientId, [$request->validated('invoice_date')]);
+        $environment = $this->environmentContext->current();
+        $quotaError = $this->invoiceQuota->firstLimitError($clientId, [$request->validated('invoice_date')], $environment);
 
         if ($quotaError) {
             return back()->withInput()->with('error', $quotaError);
@@ -92,7 +93,7 @@ class InvoiceController extends Controller
 
         $invoice = Invoice::create(array_merge($request->safe()->except('items'), [
             'client_id' => $clientId,
-            'environment' => $this->environmentContext->current(),
+            'environment' => $environment,
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
         ]));

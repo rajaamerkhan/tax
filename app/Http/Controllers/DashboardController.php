@@ -56,7 +56,7 @@ class DashboardController extends Controller
             ];
         });
         $quotaLimit = (int) ($client?->max_invoices_per_month ?? 30);
-        $quotaUsed = $client?->invoiceCountForMonth() ?? 0;
+        $quotaUsed = $client?->invoiceCountForMonth(environment: $environment) ?? 0;
 
         $topCustomers = Customer::query()
             ->forClient($clientId)

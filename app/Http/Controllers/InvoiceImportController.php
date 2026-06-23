@@ -133,7 +133,7 @@ class InvoiceImportController extends Controller
             }
         }
 
-        $quotaError = $this->invoiceQuota->firstLimitError($import->client_id, $newInvoiceDates);
+        $quotaError = $this->invoiceQuota->firstLimitError($import->client_id, $newInvoiceDates, $environment);
 
         if ($quotaError) {
             return back()->with('error', $quotaError);

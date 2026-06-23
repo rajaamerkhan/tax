@@ -300,6 +300,17 @@ class SaasAccessControlTest extends TestCase
             'created_by' => $admin->id,
             'updated_by' => $admin->id,
         ]);
+        Invoice::create([
+            'client_id' => $client->id,
+            'invoice_number' => 'PRODUCTION-LIMIT-001',
+            'invoice_date' => now()->toDateString(),
+            'invoice_type' => 'Sale Invoice',
+            'environment' => 'production',
+            'buyer_name' => 'Production Buyer',
+            'status' => 'draft',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
 
         $this->actingAs($owner)
             ->withSession(['managed_client_id' => $client->id, 'managed_client_name' => $client->name])
@@ -307,7 +318,14 @@ class SaasAccessControlTest extends TestCase
             ->assertRedirect(route('invoices.index'));
 
         $this->assertSoftDeleted('invoices', ['id' => $deletedInvoice->id]);
-        $this->assertSame(0, $client->fresh()->invoiceCountForMonth());
+        $this->assertSame(0, $client->fresh()->invoiceCountForMonth(environment: 'sandbox'));
+        $this->assertSame(1, $client->fresh()->invoiceCountForMonth(environment: 'production'));
+
+        $this->actingAs($owner)
+            ->withSession(['managed_client_id' => $client->id, 'managed_client_name' => $client->name])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('0/1');
 
         $this->actingAs($admin)->post(route('invoices.store'), [
             'invoice_number' => 'ACTIVE-LIMIT-001',
@@ -324,8 +342,9 @@ class SaasAccessControlTest extends TestCase
             ->assertSessionDoesntHaveErrors()
             ->assertSessionMissing('error');
 
-        $this->assertSame(1, Invoice::query()->where('client_id', $client->id)->count());
-        $this->assertSame(2, Invoice::withTrashed()->where('client_id', $client->id)->count());
+        $this->assertSame(1, Invoice::query()->where('client_id', $client->id)->where('environment', 'sandbox')->count());
+        $this->assertSame(2, Invoice::query()->where('client_id', $client->id)->count());
+        $this->assertSame(3, Invoice::withTrashed()->where('client_id', $client->id)->count());
     }
 
     private function clientWithInvoice(string $clientName, string $invoiceNumber, string $buyerName): array

@@ -7,7 +7,7 @@ use Illuminate\Support\Carbon;
 
 class ClientInvoiceQuota
 {
-    public function firstLimitError(?int $clientId, iterable $invoiceDates): ?string
+    public function firstLimitError(?int $clientId, iterable $invoiceDates, ?string $environment = null): ?string
     {
         $client = $clientId ? Client::query()->find($clientId) : null;
 
@@ -26,7 +26,7 @@ class ClientInvoiceQuota
 
         foreach ($requestedByMonth as $entry) {
             $limit = (int) $client->max_invoices_per_month;
-            $used = $client->invoiceCountForMonth($entry['month']);
+            $used = $client->invoiceCountForMonth($entry['month'], $environment);
 
             if ($used + $entry['count'] > $limit) {
                 return sprintf(
