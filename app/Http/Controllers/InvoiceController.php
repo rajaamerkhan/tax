@@ -138,6 +138,17 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.show', $invoice)->with('status', 'Invoice updated successfully.');
     }
 
+    public function destroy(Request $request, Invoice $invoice): RedirectResponse
+    {
+        abort_unless($request->user()?->isManagingClient(), 403);
+
+        $this->authorizeCurrentEnvironment($invoice);
+        $this->tenantContext->authorizeModel($invoice);
+        $invoice->delete();
+
+        return redirect()->route('invoices.index')->with('status', 'Invoice deleted successfully.');
+    }
+
     public function validateWithFbr(Invoice $invoice): RedirectResponse
     {
         $this->authorizeCurrentEnvironment($invoice);

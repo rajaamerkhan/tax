@@ -58,14 +58,19 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/reference-data/hs-codes/template', [ReferenceDataController::class, 'downloadHsTemplate'])->name('reference-data.hs-codes.template');
     });
 
+    Route::middleware('role:owner')->group(function (): void {
+        Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+        Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
+    });
+
     Route::middleware('role:admin,accountant')->group(function (): void {
-        Route::resource('customers', CustomerController::class)->except(['index', 'show']);
+        Route::resource('customers', CustomerController::class)->except(['index', 'show', 'destroy']);
         Route::get('/imports', [InvoiceImportController::class, 'index'])->name('imports.index');
         Route::get('/imports/template', [InvoiceImportController::class, 'sampleTemplate'])->name('imports.template');
         Route::get('/imports/{import}', [InvoiceImportController::class, 'show'])->name('imports.show');
         Route::post('/imports/preview', [InvoiceImportController::class, 'preview'])->name('imports.preview');
         Route::post('/imports/{import}', [InvoiceImportController::class, 'store'])->name('imports.store');
-        Route::resource('invoices', InvoiceController::class)->except(['index', 'show']);
+        Route::resource('invoices', InvoiceController::class)->except(['index', 'show', 'destroy']);
         Route::post('/invoices/{invoice}/validate-fbr', [InvoiceController::class, 'validateWithFbr'])->name('invoices.validate-fbr');
         Route::post('/invoices/{invoice}/submit-fbr', [InvoiceController::class, 'submitToFbr'])->name('invoices.submit-fbr');
     });

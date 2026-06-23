@@ -63,7 +63,8 @@ class DashboardController extends Controller
             ->leftJoin('invoices', function ($join) use ($environment, $clientId): void {
                 $join->on('customers.id', '=', 'invoices.customer_id')
                     ->where('invoices.client_id', $clientId)
-                    ->where('invoices.environment', $environment);
+                    ->where('invoices.environment', $environment)
+                    ->whereNull('invoices.deleted_at');
             })
             ->select('customers.name')
             ->selectRaw('COUNT(invoices.id) as invoice_count')

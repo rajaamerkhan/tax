@@ -16,7 +16,18 @@
             @forelse($customers as $customer)
                 <tr>
                     <td>{{ $customer->name }}</td><td>{{ $customer->ntn_cnic }}</td><td>{{ $customer->strn }}</td><td>{{ ucfirst(optional($customer->buyer_type)->value ?? $customer->buyer_type) }}</td><td>{{ ucfirst(optional($customer->status)->value ?? $customer->status) }}</td>
-                    <td class="text-end"><a class="btn btn-sm btn-outline-light" href="{{ route('customers.show', $customer) }}">View</a></td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-2">
+                            <a class="btn btn-sm btn-outline-light" href="{{ route('customers.show', $customer) }}">View</a>
+                            @if(auth()->user()?->isManagingClient())
+                                <form method="POST" action="{{ route('customers.destroy', $customer) }}" onsubmit="return confirm('Delete this customer? The record will be hidden but kept in the database.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            @endif
+                        </div>
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="6" class="text-secondary">No customers found.</td></tr>

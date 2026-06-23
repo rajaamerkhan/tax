@@ -43,6 +43,13 @@
             @endif
             <a href="{{ route('invoices.print', $invoice) }}" target="_blank" class="btn btn-outline-light">Print</a>
             <a href="{{ route('invoices.download-pdf', $invoice) }}" class="btn btn-outline-light">Download PDF</a>
+            @if(auth()->user()?->isManagingClient())
+                <form method="POST" action="{{ route('invoices.destroy', $invoice) }}" onsubmit="return confirm('Delete this invoice? The record will be hidden but kept in the database.');">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-outline-danger">Delete</button>
+                </form>
+            @endif
         </div>
     </section>
 

@@ -70,13 +70,15 @@ class CustomerController extends Controller
         return redirect()->route('customers.show', $customer)->with('status', 'Customer updated successfully.');
     }
 
-    public function destroy(Customer $customer): RedirectResponse
+    public function destroy(Request $request, Customer $customer): RedirectResponse
     {
+        abort_unless($request->user()?->isManagingClient(), 403);
+
         $this->tenantContext->authorizeModel($customer);
         $customer->update(['status' => 'inactive']);
         $customer->delete();
 
-        return redirect()->route('customers.index')->with('status', 'Customer deactivated successfully.');
+        return redirect()->route('customers.index')->with('status', 'Customer deleted successfully.');
     }
 
     private function provinceOptions(): Collection

@@ -2,7 +2,21 @@
 @section('title', 'Customer Details')
 @section('content')
 <div class="panel">
-    <div class="panel-header d-flex justify-content-between align-items-center"><h2>{{ $customer->name }}</h2><div class="d-flex gap-2"><a href="{{ route('customers.edit', $customer) }}" class="btn btn-outline-light">Edit</a><form method="POST" action="{{ route('customers.destroy', $customer) }}">@csrf @method('DELETE')<button class="btn btn-outline-danger">Deactivate</button></form></div></div>
+    <div class="panel-header d-flex justify-content-between align-items-center">
+        <h2>{{ $customer->name }}</h2>
+        <div class="d-flex gap-2">
+            @if(auth()->user()?->canEditInvoices())
+                <a href="{{ route('customers.edit', $customer) }}" class="btn btn-outline-light">Edit</a>
+            @endif
+            @if(auth()->user()?->isManagingClient())
+                <form method="POST" action="{{ route('customers.destroy', $customer) }}" onsubmit="return confirm('Delete this customer? The record will be hidden but kept in the database.');">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-outline-danger">Delete</button>
+                </form>
+            @endif
+        </div>
+    </div>
     <div class="row g-3">
         <div class="col-md-4"><div class="metric-label">CNIC / NTN</div><div>{{ $customer->ntn_cnic ?: 'N/A' }}</div></div>
         <div class="col-md-4"><div class="metric-label">STRN</div><div>{{ $customer->strn ?: 'N/A' }}</div></div>
