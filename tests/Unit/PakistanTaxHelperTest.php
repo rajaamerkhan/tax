@@ -16,6 +16,9 @@ class PakistanTaxHelperTest extends TestCase
     {
         $this->assertSame('3520212345671', PakistanTaxHelper::normalizeCnic('35202-1234567-1'));
         $this->assertSame('41749413', PakistanTaxHelper::normalizeNtn('4174941-3'));
+        $this->assertSame('F518891', PakistanTaxHelper::normalizeFbrSellerRegistration('F518891-5'));
+        $this->assertSame('F518891', PakistanTaxHelper::normalizeFbrSellerRegistration(' f518891 '));
+        $this->assertSame('F518891-5', PakistanTaxHelper::normalizeSellerTaxNumber(' f518891-5 '));
     }
 
     #[Test]
@@ -35,6 +38,20 @@ class PakistanTaxHelperTest extends TestCase
         $this->assertTrue(PakistanTaxHelper::isValidNtn('4174941-3'));
         $this->assertFalse(PakistanTaxHelper::isValidNtn('417494'));
         $this->assertFalse(PakistanTaxHelper::isValidNtn('ABC12345'));
+    }
+
+    #[Test]
+    public function it_validates_fbr_seller_registration_values(): void
+    {
+        $this->assertTrue(PakistanTaxHelper::isValidFbrSellerRegistration('35202-1234567-1'));
+        $this->assertTrue(PakistanTaxHelper::isValidFbrSellerRegistration('F518891'));
+        $this->assertTrue(PakistanTaxHelper::isValidFbrSellerRegistration('F518891-5'));
+        $this->assertFalse(PakistanTaxHelper::isValidFbrSellerRegistration('4174941-3'));
+        $this->assertFalse(PakistanTaxHelper::isValidFbrSellerRegistration('F51889'));
+        $this->assertFalse(PakistanTaxHelper::isValidFbrSellerRegistration('ABC12345'));
+        $this->assertTrue(PakistanTaxHelper::isValidSellerTaxNumber('F518891-5'));
+        $this->assertTrue(PakistanTaxHelper::isValidSellerTaxNumber('4174941-3'));
+        $this->assertFalse(PakistanTaxHelper::isValidSellerTaxNumber('35202-1234567-1'));
     }
 
     #[Test]

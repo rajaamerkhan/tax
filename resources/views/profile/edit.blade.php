@@ -38,6 +38,7 @@
                 <table class="table profile-info-table mb-0">
                     <tbody>
                     <tr><th>Company Name</th><td>{{ $company?->name ?: $client?->name ?: 'Not set' }}</td></tr>
+                    <tr><th>CNIC / Registration No.</th><td>{{ $company?->fbr_registration_number ?: 'Not set' }}</td></tr>
                     <tr><th>Tax Number (NTN)</th><td>{{ $company?->ntn_cnic ?: 'Not set' }}</td></tr>
                     <tr><th>Email</th><td>{{ $company?->email ?: $client?->email ?: 'Not set' }}</td></tr>
                     <tr><th>Phone</th><td>{{ $company?->phone ?: $client?->phone ?: 'Not set' }}</td></tr>

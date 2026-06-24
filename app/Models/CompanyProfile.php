@@ -17,6 +17,7 @@ class CompanyProfile extends Model
         'name',
         'client_id',
         'ntn_cnic',
+        'fbr_registration_number',
         'strn',
         'province_id',
         'address',

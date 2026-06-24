@@ -31,8 +31,8 @@ class CompanyProfileControllerTest extends TestCase
 
         $response = $this->actingAs($user)->put(route('company.update'), [
             'name' => 'Demo Seller',
+            'fbr_registration_number' => '3520212345671',
             'ntn_cnic' => '1234567-8',
-            'strn' => '1234567890123',
             'address' => 'Lahore, Pakistan',
             'phone' => '+92-300-0000000',
             'email' => 'info@example.com',
@@ -62,8 +62,8 @@ class CompanyProfileControllerTest extends TestCase
 
         $response = $this->actingAs($user)->put(route('company.update'), [
             'name' => 'Updated Seller',
+            'fbr_registration_number' => '3520212345671',
             'ntn_cnic' => '1234567-8',
-            'strn' => null,
             'province_id' => null,
             'address' => null,
             'phone' => null,
@@ -85,6 +85,54 @@ class CompanyProfileControllerTest extends TestCase
     }
 
     #[Test]
+    public function company_profile_accepts_cnic_registration_number_and_ntn_separately(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::Admin]);
+
+        $response = $this->actingAs($user)->put(route('company.update'), [
+            'name' => 'M/S Saif & Fahad Trader',
+            'fbr_registration_number' => 'F518891',
+            'ntn_cnic' => 'F518891-5',
+            'province_id' => null,
+            'address' => 'Lahore, Pakistan',
+            'phone' => null,
+            'email' => null,
+            'fbr_sandbox_token' => 'sandbox-token',
+            'fbr_environment' => 'sandbox',
+            'fbr_business_nature' => 'distributor',
+        ]);
+
+        $response->assertRedirect();
+        $company = CompanyProfile::first();
+        $this->assertSame('F518891', $company->fbr_registration_number);
+        $this->assertSame('F518891-5', $company->ntn_cnic);
+    }
+
+    #[Test]
+    public function company_profile_normalizes_registration_number_for_api_usage(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::Admin]);
+
+        $response = $this->actingAs($user)->put(route('company.update'), [
+            'name' => 'M/S Saif & Fahad Trader',
+            'fbr_registration_number' => 'f518891-5',
+            'ntn_cnic' => 'F518891-5',
+            'province_id' => null,
+            'address' => 'Lahore, Pakistan',
+            'phone' => null,
+            'email' => null,
+            'fbr_sandbox_token' => 'sandbox-token',
+            'fbr_environment' => 'sandbox',
+            'fbr_business_nature' => 'distributor',
+        ]);
+
+        $response->assertRedirect();
+        $company = CompanyProfile::first();
+        $this->assertSame('F518891', $company->fbr_registration_number);
+        $this->assertSame('F518891-5', $company->ntn_cnic);
+    }
+
+    #[Test]
     public function owner_can_update_a_specific_clients_company_profile(): void
     {
         $owner = User::factory()->create([
@@ -102,8 +150,8 @@ class CompanyProfileControllerTest extends TestCase
 
         $this->actingAs($owner)->put(route('owner.clients.company.update', $client), [
             'name' => 'Client One Seller',
+            'fbr_registration_number' => '3520212345671',
             'ntn_cnic' => '1234567-8',
-            'strn' => '1234567890123',
             'province_id' => null,
             'address' => 'Client One Address',
             'phone' => '+92-300-0000000',

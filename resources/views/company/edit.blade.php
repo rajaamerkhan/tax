@@ -11,8 +11,16 @@
     <form method="POST" action="{{ $updateRoute }}" class="row g-3">
         @csrf @method('PUT')
         <div class="col-md-6"><label class="form-label">Company Name</label><input class="form-control" name="name" value="{{ old('name', $company->name) }}"></div>
-        <div class="col-md-3"><label class="form-label">NTN / CNIC</label><input class="form-control" name="ntn_cnic" value="{{ old('ntn_cnic', $company->ntn_cnic) }}"></div>
-        <div class="col-md-3"><label class="form-label">STRN</label><input class="form-control" name="strn" value="{{ old('strn', $company->strn) }}"></div>
+        <div class="col-md-3">
+            <label class="form-label">CNIC / Registration No.</label>
+            <input class="form-control" name="fbr_registration_number" value="{{ old('fbr_registration_number', $company->fbr_registration_number) }}" placeholder="e.g. F518891">
+            <div class="form-text text-muted">Enter the seller CNIC or the Registration No. from the FBR Digital Invoicing portal. This is sent to FBR as sellerNTNCNIC.</div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Tax Number (NTN)</label>
+            <input class="form-control" name="ntn_cnic" value="{{ old('ntn_cnic', $company->ntn_cnic) }}" placeholder="e.g. F518891-5">
+            <div class="form-text text-muted">Enter the NTN shown in the FBR portal, such as F518891-5, or a numeric NTN such as 4174941-3.</div>
+        </div>
         <div class="col-md-4"><label class="form-label">Province</label><select class="form-select" name="province_id"><option value="">Select</option>@foreach($provinces as $province)<option value="{{ $province->id }}" @selected(old('province_id', $company->province_id) == $province->id)>{{ $province->display_name ?? $province->name }}</option>@endforeach</select></div>
         <div class="col-md-4"><label class="form-label">Phone</label><input class="form-control" name="phone" value="{{ old('phone', $company->phone) }}"></div>
         <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" type="email" name="email" value="{{ old('email', $company->email) }}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-no-autofill data-lpignore="true" data-1p-ignore></div>

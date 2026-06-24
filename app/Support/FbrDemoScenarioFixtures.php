@@ -65,9 +65,19 @@ class FbrDemoScenarioFixtures
         return [
             'SN001' => self::scenario($standard, 'SN001', 'Goods at standard rate to registered buyers', 'Goods at standard rate (default)', [
                 ...self::registeredBuyer(),
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 180,
+                    'total_value' => 1180,
+                ],
             ]),
             'SN002' => self::scenario($standard, 'SN002', 'Goods at standard rate to unregistered buyers', 'Goods at standard rate (default)', [
                 ...self::unregisteredBuyer(),
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 180,
+                    'total_value' => 1180,
+                ],
             ]),
             'SN003' => self::scenario($standard, 'SN003', 'Sale of Steel (Melted and Re-Rolled)', 'Steel Melting and re-rolling', [
                 'sale_type_code' => 'DEMO-STEEL-MELTING',
@@ -75,6 +85,11 @@ class FbrDemoScenarioFixtures
                 'description' => 'Other bars and rods of iron or non-alloy steel',
                 'uom' => 'MT',
                 'unit_price' => 243280.60,
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 206170,
+                    'sales_tax' => 37110.6,
+                    'total_value' => 243280.6,
+                ],
             ]),
             'SN004' => self::scenario($standard, 'SN004', 'Sale by Ship Breakers', 'Ship breaking', [
                 'sale_type_code' => 'DEMO-SHIP-BREAKING',
@@ -82,6 +97,11 @@ class FbrDemoScenarioFixtures
                 'description' => 'Ship breaking scrap',
                 'uom' => 'MT',
                 'unit_price' => 243280.60,
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 206170,
+                    'sales_tax' => 37110.6,
+                    'total_value' => 243280.6,
+                ],
             ]),
             'SN005' => self::scenario($standard, 'SN005', 'Reduced rate sale', 'Goods at Reduced Rate', [
                 'sale_type_code' => 'DEMO-REDUCED-RATE',
@@ -92,6 +112,11 @@ class FbrDemoScenarioFixtures
                 'unit_price' => 1100,
                 'sro_schedule_number' => 'EIGHTH SCHEDULE Table 1',
                 'item_serial_number' => '1',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 100,
+                    'total_value' => 1100,
+                ],
             ]),
             'SN006' => self::scenario($standard, 'SN006', 'Exempt goods sale', 'Exempt Goods', [
                 ...self::registeredBuyer(),
@@ -129,12 +154,22 @@ class FbrDemoScenarioFixtures
                 'hs_code' => '5201.0090',
                 'description' => 'Other cotton, not carded or combed',
                 'uom' => 'KG',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 180,
+                    'total_value' => 1180,
+                ],
             ]),
             'SN010' => self::scenario($standard, 'SN010', 'Telecom services rendered or provided', 'Telecommunication services', [
                 'sale_type_code' => 'DEMO-TELECOM',
                 'rate_label' => '17%',
                 'rate_percent' => 17,
                 'unit_price' => 1170,
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 170,
+                    'total_value' => 1170,
+                ],
             ]),
             'SN011' => self::scenario($standard, 'SN011', 'Toll Manufacturing sale by Steel sector', 'Toll Manufacturing', [
                 'sale_type_code' => 'DEMO-TOLL-MANUFACTURING',
@@ -146,6 +181,11 @@ class FbrDemoScenarioFixtures
                 'hs_code' => '2710.1210',
                 'description' => 'Motor spirit',
                 'uom' => 'Liter',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 180,
+                    'total_value' => 1180,
+                ],
             ]),
             'SN013' => self::scenario($standard, 'SN013', 'Electricity Supply to Retailers', 'Electricity Supply to Retailers', [
                 'sale_type_code' => 'DEMO-ELECTRICITY',
@@ -155,11 +195,22 @@ class FbrDemoScenarioFixtures
                 'rate_label' => '5%',
                 'rate_percent' => 5,
                 'unit_price' => 1050,
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 50,
+                    'total_value' => 1050,
+                ],
             ]),
             'SN014' => self::scenario($standard, 'SN014', 'Sale of Gas to CNG stations', 'Gas to CNG stations', [
                 'sale_type_code' => 'DEMO-GAS-CNG',
                 'hs_code' => '2711.2100',
                 'description' => 'Natural gas in gaseous state',
+                'uom' => 'KG',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 180,
+                    'total_value' => 1180,
+                ],
             ]),
             'SN015' => self::scenario($standard, 'SN015', 'Sale of mobile phones', 'Mobile Phones', [
                 'sale_type_code' => 'DEMO-MOBILE-PHONES',
@@ -171,27 +222,52 @@ class FbrDemoScenarioFixtures
                 'unit_price' => 1180,
                 'sro_schedule_number' => 'NINTH SCHEDULE',
                 'item_serial_number' => '1(A)',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 180,
+                    'total_value' => 1180,
+                ],
             ]),
-            'SN016' => self::scenario($standard, 'SN016', 'Processing / Conversion of Goods', 'Processing/ Conversion of Goods', [
+            'SN016' => self::scenario($standard, 'SN016', 'Processing / Conversion of Goods', 'Processing/Conversion of Goods', [
                 'sale_type_code' => 'DEMO-PROCESSING',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 180,
+                    'total_value' => 1180,
+                ],
             ]),
             'SN017' => self::scenario($standard, 'SN017', 'Sale of Goods where FED is charged in ST mode', 'Goods (FED in ST Mode)', [
                 'sale_type_code' => 'DEMO-GOODS-FED',
                 'rate_label' => '17%',
                 'rate_percent' => 17,
                 'unit_price' => 1170,
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 170,
+                    'total_value' => 1170,
+                ],
             ]),
             'SN018' => self::scenario($standard, 'SN018', 'Services rendered or provided where FED is charged in ST mode', 'Services (FED in ST Mode)', [
                 'sale_type_code' => 'DEMO-SERVICES-FED',
                 'rate_label' => '17%',
                 'rate_percent' => 17,
                 'unit_price' => 1170,
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 170,
+                    'total_value' => 1170,
+                ],
             ]),
             'SN019' => self::scenario($standard, 'SN019', 'Services rendered or provided', 'Services', [
                 'sale_type_code' => 'DEMO-SERVICES',
-                'rate_label' => 'Exempt',
-                'rate_percent' => 0,
-                'unit_price' => 1000,
+                'rate_label' => '16%',
+                'rate_percent' => 16,
+                'unit_price' => 1160,
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 160,
+                    'total_value' => 1160,
+                ],
             ]),
             'SN020' => self::scenario($standard, 'SN020', 'Sale of Electric Vehicles', 'Electric Vehicle', [
                 'sale_type_code' => 'DEMO-ELECTRIC-VEHICLE',
@@ -202,6 +278,11 @@ class FbrDemoScenarioFixtures
                 'unit_price' => 1010,
                 'sro_schedule_number' => '6th Schd Table III',
                 'item_serial_number' => '20',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 10,
+                    'total_value' => 1010,
+                ],
             ]),
             'SN021' => self::scenario($standard, 'SN021', 'Sale of Cement /Concrete Block', 'Cement /Concrete Block', [
                 'sale_type_code' => 'DEMO-CEMENT-CONCRETE',
@@ -256,6 +337,11 @@ class FbrDemoScenarioFixtures
                 'unit_price' => 1250,
                 'sro_schedule_number' => '297(I)/2023-Table-I',
                 'item_serial_number' => '12',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 250,
+                    'total_value' => 1250,
+                ],
             ]),
             'SN025' => self::scenario($standard, 'SN025', 'Drugs sold at fixed ST rate under serial 81 of Eighth Schedule Table 1', 'Non-Adjustable Supplies', [
                 'sale_type_code' => 'DEMO-NON-ADJUSTABLE',
@@ -270,6 +356,11 @@ class FbrDemoScenarioFixtures
             ]),
             'SN026' => self::scenario($standard, 'SN026', 'Sale to End Consumer by retailers', 'Goods at standard rate (default)', [
                 ...self::unregisteredBuyer(),
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 180,
+                    'total_value' => 1180,
+                ],
             ]),
             'SN027' => self::scenario($standard, 'SN027', 'Sale to End Consumer by retailers', '3rd Schedule Goods', [
                 ...self::unregisteredBuyer(),
@@ -289,6 +380,11 @@ class FbrDemoScenarioFixtures
                 'unit_price' => 1050,
                 'sro_schedule_number' => 'EIGHTH SCHEDULE Table 1',
                 'item_serial_number' => '77',
+                'payload_overrides' => [
+                    'value_excluding_sales_tax' => 1000,
+                    'sales_tax' => 50,
+                    'total_value' => 1050,
+                ],
             ]),
         ];
     }

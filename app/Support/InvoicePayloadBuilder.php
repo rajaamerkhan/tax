@@ -19,7 +19,7 @@ class InvoicePayloadBuilder
         return [
             'invoiceType' => $invoice->invoice_type ?: '',
             'invoiceDate' => optional($invoice->invoice_date)->format('Y-m-d') ?: '',
-            'sellerNTNCNIC' => $company?->ntn_cnic ?: '',
+            'sellerNTNCNIC' => $company?->fbr_registration_number ?: ($company?->ntn_cnic ?: ''),
             'sellerBusinessName' => $company?->name ?: '',
             'sellerProvince' => $invoice->saleOriginProvince?->name ?? $invoice->saleOriginProvince?->code ?? '',
             'sellerAddress' => $company?->address ?: '',
