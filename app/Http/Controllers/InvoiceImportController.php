@@ -50,7 +50,7 @@ class InvoiceImportController extends Controller
         $errors = [];
         $clientId = $this->tenantContext->clientId($request->user());
         $environment = $this->environmentContext->current($clientId);
-        $existingInvoices = Invoice::query()
+        $existingInvoices = Invoice::withTrashed()
             ->where('client_id', $clientId)
             ->where('environment', $environment)
             ->whereIn('invoice_number', $rows->pluck('invoice_number')->filter()->unique()->values())
@@ -122,7 +122,7 @@ class InvoiceImportController extends Controller
         $newInvoiceDates = [];
 
         foreach ($grouped as $invoiceNumber => $rows) {
-            $exists = Invoice::query()
+            $exists = Invoice::withTrashed()
                 ->where('client_id', $import->client_id)
                 ->where('environment', $environment)
                 ->where('invoice_number', $invoiceNumber)
@@ -143,7 +143,7 @@ class InvoiceImportController extends Controller
 
         foreach ($grouped as $invoiceNumber => $rows) {
             $first = $rows->first();
-            $invoice = Invoice::query()
+            $invoice = Invoice::withTrashed()
                 ->where('client_id', $import->client_id)
                 ->where('environment', $environment)
                 ->where('invoice_number', $invoiceNumber)
@@ -151,6 +151,10 @@ class InvoiceImportController extends Controller
 
             if ($invoice && ! $this->canReplaceFromImport($invoice)) {
                 continue;
+            }
+
+            if ($invoice?->trashed()) {
+                $invoice->restore();
             }
 
             $customer = $this->resolveCustomer($first, $import->client_id);

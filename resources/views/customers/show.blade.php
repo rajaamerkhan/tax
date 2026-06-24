@@ -18,8 +18,8 @@
         </div>
     </div>
     <div class="row g-3">
-        <div class="col-md-4"><div class="metric-label">CNIC / NTN</div><div>{{ $customer->ntn_cnic ?: 'N/A' }}</div></div>
-        <div class="col-md-4"><div class="metric-label">STRN</div><div>{{ $customer->strn ?: 'N/A' }}</div></div>
+        <div class="col-md-4"><div class="metric-label">CNIC / Registration No.</div><div>{{ $customer->ntn_cnic ?: 'N/A' }}</div></div>
+        <div class="col-md-4"><div class="metric-label">Tax Number (NTN)</div><div>{{ $customer->strn ?: 'N/A' }}</div></div>
         <div class="col-md-4"><div class="metric-label">Buyer Type</div><div>{{ ucfirst(optional($customer->buyer_type)->value ?? $customer->buyer_type) }}</div></div>
         <div class="col-md-4"><div class="metric-label">Province</div><div>{{ $customer->province?->name ?: 'N/A' }}</div></div>
         <div class="col-md-4"><div class="metric-label">Status</div><div>{{ ucfirst(optional($customer->status)->value ?? $customer->status) }}</div></div>

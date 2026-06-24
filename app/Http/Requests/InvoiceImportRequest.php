@@ -14,7 +14,7 @@ class InvoiceImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'mimes:xlsx,csv,txt'],
+            'file' => ['required', 'file', 'mimes:xls,xlsx,csv,txt'],
         ];
     }
 }

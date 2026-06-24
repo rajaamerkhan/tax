@@ -8,10 +8,10 @@
             <a href="{{ route('customers.create') }}" class="btn btn-primary">New Customer</a>
         @endif
     </div>
-    <form class="row g-3 mb-3"><div class="col-md-4"><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Search by name, CNIC/NTN, STRN"></div><div class="col-md-2"><button class="btn btn-outline-light w-100">Search</button></div></form>
+    <form class="row g-3 mb-3"><div class="col-md-4"><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Search by name, CNIC/registration no., NTN"></div><div class="col-md-2"><button class="btn btn-outline-light w-100">Search</button></div></form>
     <div class="table-responsive">
         <table class="table align-middle">
-            <thead><tr><th>Name</th><th>CNIC / NTN</th><th>STRN</th><th>Buyer Type</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>CNIC / Registration No.</th><th>Tax Number (NTN)</th><th>Buyer Type</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @forelse($customers as $customer)
                 <tr>

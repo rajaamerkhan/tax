@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -67,6 +68,36 @@ class InvoiceImportTest extends TestCase
         $this->assertSame(187014.0, (float) $item->sales_tax);
         $this->assertSame(1038966.67, round((float) $item->fixed_notified_value, 2));
         $this->assertSame(1099169.0, (float) $item->total_value);
+        $this->assertSame(1099169.0, (float) $invoice->grand_total);
+    }
+
+    #[Test]
+    public function admin_can_import_legacy_xls_sales_format(): void
+    {
+        $this->seed();
+        $admin = User::factory()->create([
+            'client_id' => 1,
+            'role' => UserRole::Admin,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('imports.preview'), ['file' => $this->salesFormatWorkbook('xls')])
+            ->assertRedirect();
+
+        $batch = InvoiceImportBatch::query()->latest()->firstOrFail();
+
+        $this->assertSame('previewed', $batch->status);
+        $this->assertSame([], $batch->errors);
+
+        $this->actingAs($admin)
+            ->post(route('imports.store', $batch))
+            ->assertRedirect(route('imports.show', $batch));
+
+        $invoice = Invoice::query()->with(['items', 'customer', 'scenario'])->where('invoice_number', '797')->firstOrFail();
+
+        $this->assertSame('FBR INTERNAL', $invoice->customer->name);
+        $this->assertSame('SN008', $invoice->scenario->code);
+        $this->assertSame('CEMENT', $invoice->items->first()->description);
         $this->assertSame(1099169.0, (float) $invoice->grand_total);
     }
 
@@ -142,6 +173,49 @@ class InvoiceImportTest extends TestCase
         $this->assertSame(InvoiceStatus::Draft, $invoice->status);
         $this->assertSame('CEMENT', $invoice->items->first()->description);
         $this->assertSame(1099169.0, (float) $invoice->grand_total);
+    }
+
+    #[Test]
+    public function import_restores_and_replaces_editable_soft_deleted_invoices(): void
+    {
+        $this->seed();
+        $admin = User::factory()->create([
+            'client_id' => 1,
+            'role' => UserRole::Admin,
+        ]);
+
+        $invoice = Invoice::create([
+            'client_id' => $admin->client_id,
+            'invoice_number' => '797',
+            'invoice_date' => '2026-05-01',
+            'invoice_type' => 'Sale Invoice',
+            'environment' => 'sandbox',
+            'buyer_name' => 'FBR INTERNAL',
+            'status' => InvoiceStatus::Validated,
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+        $invoice->delete();
+
+        $this->actingAs($admin)
+            ->post(route('imports.preview'), ['file' => $this->salesFormatWorkbook()])
+            ->assertRedirect();
+
+        $batch = InvoiceImportBatch::query()->latest()->firstOrFail();
+
+        $this->assertSame('previewed', $batch->status);
+        $this->assertSame([], $batch->errors);
+
+        $this->actingAs($admin)
+            ->post(route('imports.store', $batch))
+            ->assertRedirect(route('imports.show', $batch));
+
+        $invoice->refresh()->load('items');
+
+        $this->assertNull($invoice->deleted_at);
+        $this->assertSame(1, Invoice::query()->where('invoice_number', '797')->count());
+        $this->assertSame(InvoiceStatus::Draft, $invoice->status);
+        $this->assertSame('CEMENT', $invoice->items->first()->description);
     }
 
     #[Test]
@@ -223,7 +297,7 @@ class InvoiceImportTest extends TestCase
         $this->assertSame(['Invoice number 797 already exists in sandbox with submitted status and cannot be re-imported.'], $batch->errors[2]);
     }
 
-    private function salesFormatWorkbook(): UploadedFile
+    private function salesFormatWorkbook(string $extension = 'xlsx'): UploadedFile
     {
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
@@ -288,13 +362,14 @@ class InvoiceImportTest extends TestCase
             ],
         ]);
 
-        $path = tempnam(sys_get_temp_dir(), 'sales-format-').'.xlsx';
-        (new Xlsx($spreadsheet))->save($path);
+        $path = tempnam(sys_get_temp_dir(), 'sales-format-').'.'.$extension;
+        $writer = $extension === 'xls' ? new Xls($spreadsheet) : new Xlsx($spreadsheet);
+        $writer->save($path);
 
         return new UploadedFile(
             $path,
-            'Sales Format May-2026 Digital Invoice.xlsx',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Sales Format May-2026 Digital Invoice.'.$extension,
+            $extension === 'xls' ? 'application/vnd.ms-excel' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             null,
             true,
         );

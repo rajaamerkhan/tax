@@ -56,7 +56,7 @@
                         <input type="hidden" class="buyer-field" name="buyer_strn" value="{{ old('buyer_strn', $invoice->buyer_strn ?: $selectedCustomer?->strn) }}">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Buyer Registration No. (CNIC/NTN)</label>
+                        <label class="form-label">Buyer CNIC / Registration No.</label>
                         <input class="form-control buyer-field" name="buyer_ntn_cnic" value="{{ old('buyer_ntn_cnic', $invoice->buyer_ntn_cnic ?: $selectedCustomer?->ntn_cnic) }}" readonly>
                     </div>
                     <div class="col-md-6">
